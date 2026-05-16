@@ -1568,15 +1568,10 @@ PRE-LAUNCH CHECKLIST — COMPLETE ALL BEFORE GOING LIVE
         ebCount.style.display = 'none';
       }
 
-      // Lock order form before campaign opens or after it ends
+      // Lock order form only after campaign ends
       const formWrap = document.getElementById('payment-form-wrap');
       const priceSummary = document.querySelector('.price-summary-box');
-      if (pre) {
-        if (formWrap) formWrap.style.display = 'none';
-        if (priceSummary) priceSummary.style.display = 'none';
-        const locked = document.getElementById('order-locked-msg');
-        if (locked) locked.style.display = 'block';
-      } else if (isCampaignEnded()) {
+      if (isCampaignEnded()) {
         if (formWrap) formWrap.style.display = 'none';
         if (priceSummary) priceSummary.style.display = 'none';
         const locked = document.getElementById('order-locked-msg');
