@@ -1045,6 +1045,7 @@ PRE-LAUNCH CHECKLIST — COMPLETE ALL BEFORE GOING LIVE
             <div class="price-main" id="hero-price">$54.95</div>
             <div class="price-shipping" id="hero-shipping">+ $12.95 shipping</div>
             <div class="early-bird-countdown" id="early-bird-hero-countdown" style="display:none;"></div>
+            <div class="early-bird-countdown" id="early-bird-note" style="display:none;">Order in the first 4 days (19–22 May) and pay this price. After that, $54.95 + $12.95 shipping.</div>
           </div>
 
           <a href="#order" class="cta-button">CLAIM YOUR SHIRT</a>
@@ -1163,6 +1164,11 @@ PRE-LAUNCH CHECKLIST — COMPLETE ALL BEFORE GOING LIVE
       </div>
 
       <!-- Confirmation box (shown after success) -->
+      <!-- Shown before campaign opens or after it closes -->
+      <div id="order-locked-msg" style="display:none;font-family:'Space Mono',monospace;font-size:13px;color:var(--bone);padding:24px;border:1px solid var(--mid);max-width:520px;">
+        Orders open <strong style="color:var(--offwhite);">Monday 19 May 2026 at midnight AEST</strong>. The first 4 days are early bird — $44.95 + $9.95 shipping. After that, $54.95 + $12.95.
+      </div>
+
       <div class="confirmation-box" id="confirmation-box">
         <h3>ORDER CONFIRMED</h3>
         <p id="confirmation-details"></p>
@@ -1515,6 +1521,10 @@ PRE-LAUNCH CHECKLIST — COMPLETE ALL BEFORE GOING LIVE
       return nowUTC() > CAMPAIGN_END_UTC;
     }
 
+    function isPreCampaign() {
+      return nowUTC() < CAMPAIGN_START_UTC;
+    }
+
     function formatCents(cents) {
       return '$' + (cents / 100).toFixed(2);
     }
@@ -1523,26 +1533,54 @@ PRE-LAUNCH CHECKLIST — COMPLETE ALL BEFORE GOING LIVE
     // PRICE DISPLAY
     // =========================================================
     function updatePriceDisplay() {
-      const eb = isEarlyBird();
-      const itemCents  = eb ? EARLY_BIRD_ITEM_CENTS  : STANDARD_ITEM_CENTS;
-      const shipCents  = eb ? EARLY_BIRD_SHIP_CENTS  : STANDARD_SHIP_CENTS;
+      const pre = isPreCampaign();
+      const eb  = isEarlyBird();
+
+      // Before campaign opens — show early bird price as the teaser
+      const showEbPrice = pre || eb;
+      const itemCents  = showEbPrice ? EARLY_BIRD_ITEM_CENTS : STANDARD_ITEM_CENTS;
+      const shipCents  = showEbPrice ? EARLY_BIRD_SHIP_CENTS : STANDARD_SHIP_CENTS;
       const totalCents = itemCents + shipCents;
 
-      // Hero
       const badge   = document.getElementById('price-tier-badge');
       const price   = document.getElementById('hero-price');
       const ship    = document.getElementById('hero-shipping');
       const ebCount = document.getElementById('early-bird-hero-countdown');
+      const ebNote  = document.getElementById('early-bird-note');
 
       price.textContent = formatCents(itemCents);
       ship.textContent  = '+ ' + formatCents(shipCents) + ' shipping';
 
-      if (eb) {
-        badge.style.display = 'inline-block';
+      if (pre) {
+        // Campaign not open yet — show early bird as coming deal
+        badge.textContent     = 'EARLY BIRD — OPENS 19 MAY';
+        badge.style.display   = 'inline-block';
+        if (ebNote) ebNote.style.display = 'block';
+        ebCount.style.display = 'none';
+      } else if (eb) {
+        badge.textContent     = 'EARLY BIRD';
+        badge.style.display   = 'inline-block';
+        if (ebNote) ebNote.style.display = 'none';
         ebCount.style.display = 'block';
       } else {
-        badge.style.display = 'none';
+        badge.style.display   = 'none';
+        if (ebNote) ebNote.style.display = 'none';
         ebCount.style.display = 'none';
+      }
+
+      // Lock order form before campaign opens or after it ends
+      const formWrap = document.getElementById('payment-form-wrap');
+      const priceSummary = document.querySelector('.price-summary-box');
+      if (pre) {
+        if (formWrap) formWrap.style.display = 'none';
+        if (priceSummary) priceSummary.style.display = 'none';
+        const locked = document.getElementById('order-locked-msg');
+        if (locked) locked.style.display = 'block';
+      } else if (isCampaignEnded()) {
+        if (formWrap) formWrap.style.display = 'none';
+        if (priceSummary) priceSummary.style.display = 'none';
+        const locked = document.getElementById('order-locked-msg');
+        if (locked) { locked.style.display = 'block'; locked.textContent = 'This campaign has closed.'; }
       }
 
       // Order form summary
@@ -1551,10 +1589,14 @@ PRE-LAUNCH CHECKLIST — COMPLETE ALL BEFORE GOING LIVE
       const oShip      = document.getElementById('order-shipping-price');
       const oTotal     = document.getElementById('order-total-price');
 
-      tierLabel.textContent = eb ? 'EARLY BIRD PRICE' : 'STANDARD PRICE';
-      oItem.textContent     = formatCents(itemCents);
-      oShip.textContent     = formatCents(shipCents);
-      oTotal.textContent    = formatCents(totalCents);
+      if (pre) {
+        tierLabel.textContent = 'EARLY BIRD PRICE (OPENS 19 MAY)';
+      } else {
+        tierLabel.textContent = eb ? 'EARLY BIRD PRICE' : 'STANDARD PRICE';
+      }
+      oItem.textContent  = formatCents(itemCents);
+      oShip.textContent  = formatCents(shipCents);
+      oTotal.textContent = formatCents(totalCents);
     }
 
     // =========================================================
@@ -1574,26 +1616,36 @@ PRE-LAUNCH CHECKLIST — COMPLETE ALL BEFORE GOING LIVE
     }
 
     function updateMainCountdown() {
-      const el = document.getElementById('main-countdown');
+      const el     = document.getElementById('main-countdown');
       const closed = document.getElementById('countdown-closed');
+      const label  = document.querySelector('.countdown-label');
 
       if (isCampaignEnded()) {
-        el.style.display = 'none';
+        el.style.display     = 'none';
         closed.style.display = 'block';
         return;
       }
 
-      const t = getTimeLeft(CAMPAIGN_END_UTC);
-      if (!t) {
-        el.style.display = 'none';
-        closed.style.display = 'block';
-        return;
-      }
+      closed.style.display = 'none';
+      el.style.display     = 'flex';
 
-      document.getElementById('cd-days').textContent  = pad2(t.days);
-      document.getElementById('cd-hours').textContent = pad2(t.hours);
-      document.getElementById('cd-mins').textContent  = pad2(t.mins);
-      document.getElementById('cd-secs').textContent  = pad2(t.secs);
+      if (isPreCampaign()) {
+        if (label) label.textContent = 'Early bird opens in';
+        const t = getTimeLeft(CAMPAIGN_START_UTC);
+        if (!t) return;
+        document.getElementById('cd-days').textContent  = pad2(t.days);
+        document.getElementById('cd-hours').textContent = pad2(t.hours);
+        document.getElementById('cd-mins').textContent  = pad2(t.mins);
+        document.getElementById('cd-secs').textContent  = pad2(t.secs);
+      } else {
+        if (label) label.textContent = 'Campaign closes in';
+        const t = getTimeLeft(CAMPAIGN_END_UTC);
+        if (!t) { el.style.display = 'none'; closed.style.display = 'block'; return; }
+        document.getElementById('cd-days').textContent  = pad2(t.days);
+        document.getElementById('cd-hours').textContent = pad2(t.hours);
+        document.getElementById('cd-mins').textContent  = pad2(t.mins);
+        document.getElementById('cd-secs').textContent  = pad2(t.secs);
+      }
     }
 
     function updateEarlyBirdCountdown() {
