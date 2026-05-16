@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Nix Nightshade</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black:    #0a0a0a;
+      --offwhite: #f0ece4;
+      --bone:     #d8d2c6;
+      --red:      #c0392b;
+      --border:   #1a1a1a;
+      --mid:      #2a2a2a;
+      --dim:      #555;
+    }
+
+    body {
+      background: var(--black);
+      color: var(--offwhite);
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25%       { transform: translateX(-6px); }
+      75%       { transform: translateX(6px); }
+    }
+
+    .shake { animation: shake 0.3s ease; }
+
+    /* ── Password gate ──────────────────────────────────────────────────── */
+    #gate {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .gate-inner {
+      width: 100%;
+      max-width: 380px;
+      padding: 0 24px;
+    }
+
+    .gate-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      letter-spacing: 0.04em;
+      margin-bottom: 4px;
+    }
+
+    .gate-sub {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 32px;
+    }
+
+    .gate-input {
+      width: 100%;
+      background: var(--black);
+      border: 1px solid var(--bone);
+      color: var(--offwhite);
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      padding: 13px 16px;
+      outline: none;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+
+    .gate-input:focus { border-color: var(--offwhite); }
+    .gate-input.err   { border-color: var(--red); }
+
+    .gate-btn {
+      width: 100%;
+      background: var(--offwhite);
+      color: var(--black);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      border: none;
+      padding: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .gate-btn:hover { background: var(--bone); }
+
+    .gate-err {
+      font-size: 11px;
+      color: var(--red);
+      margin-top: 10px;
+      display: none;
+    }
+
+    .gate-err.show { display: block; }
+
+    /* ── Dashboard ──────────────────────────────────────────────────────── */
+    #dashboard { display: none; }
+
+    .dash-header {
+      background: var(--border);
+      border-bottom: 1px solid var(--mid);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .dash-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.06em;
+    }
+
+    .dash-title span {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-left: 12px;
+    }
+
+    .dash-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .btn-primary {
+      background: var(--offwhite);
+      color: var(--black);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16px;
+      letter-spacing: 0.06em;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:hover { background: var(--bone); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--bone);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 16px;
+      letter-spacing: 0.06em;
+      border: 1px solid var(--mid);
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-outline:hover { border-color: var(--bone); color: var(--offwhite); }
+
+    .dash-body { padding: 32px; max-width: 1400px; }
+
+    /* ── Stats grid ─────────────────────────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: var(--border);
+      border: 1px solid var(--mid);
+      padding: 20px;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      letter-spacing: 0.02em;
+      color: var(--offwhite);
+      line-height: 1;
+    }
+
+    .stat-sub {
+      font-size: 10px;
+      color: var(--dim);
+      margin-top: 4px;
+    }
+
+    /* ── Size bars ──────────────────────────────────────────────────────── */
+    .size-section {
+      margin-bottom: 40px;
+    }
+
+    .section-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      color: var(--offwhite);
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .size-bars { display: flex; flex-direction: column; gap: 10px; max-width: 480px; }
+
+    .size-row { display: flex; align-items: center; gap: 12px; }
+
+    .size-key {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--bone);
+      width: 28px;
+      flex-shrink: 0;
+    }
+
+    .size-bar-track {
+      flex: 1;
+      height: 6px;
+      background: var(--mid);
+      overflow: hidden;
+    }
+
+    .size-bar-fill {
+      height: 100%;
+      background: var(--offwhite);
+      transition: width 0.6s ease;
+    }
+
+    .size-count {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--bone);
+      width: 36px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── Country breakdown ──────────────────────────────────────────────── */
+    .country-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .country-card {
+      background: var(--border);
+      border: 1px solid var(--mid);
+      padding: 14px 16px;
+    }
+
+    .country-name {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--bone);
+      margin-bottom: 4px;
+    }
+
+    .country-count {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      color: var(--offwhite);
+    }
+
+    /* ── Orders table ───────────────────────────────────────────────────── */
+    .table-section { margin-bottom: 40px; }
+
+    .table-wrap { overflow-x: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      min-width: 900px;
+    }
+
+    thead th {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--dim);
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--mid);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:hover { background: var(--border); }
+
+    tbody td {
+      padding: 10px 12px;
+      color: var(--bone);
+      white-space: nowrap;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tag-eb {
+      display: inline-block;
+      background: var(--red);
+      color: #fff;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      padding: 2px 6px;
+      text-transform: uppercase;
+    }
+
+    .tag-std {
+      display: inline-block;
+      background: var(--mid);
+      color: var(--bone);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      padding: 2px 6px;
+      text-transform: uppercase;
+    }
+
+    /* Status bar */
+    .status-bar {
+      font-size: 10px;
+      color: var(--dim);
+      padding: 12px 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (max-width: 600px) {
+      .dash-body { padding: 20px 16px; }
+      .dash-header { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── PASSWORD GATE ──────────────────────────────────────────────────────────── -->
+<div id="gate">
+  <div class="gate-inner">
+    <div class="gate-heading">NIX NIGHTSHADE</div>
+    <div class="gate-sub">Admin Dashboard</div>
+    <input class="gate-input" type="password" id="pw-input" placeholder="Password" autocomplete="current-password">
+    <button class="gate-btn" id="pw-btn">UNLOCK</button>
+    <div class="gate-err" id="pw-err">Incorrect password.</div>
+  </div>
+</div>
+
+<!-- ── DASHBOARD ──────────────────────────────────────────────────────────────── -->
+<div id="dashboard">
+
+  <div class="dash-header">
+    <div class="dash-title">
+      ORDERS
+      <span id="last-refresh-label">—</span>
+    </div>
+    <div class="dash-actions">
+      <button class="btn-outline" id="refresh-btn">↻ REFRESH</button>
+      <button class="btn-primary" id="csv-btn">DOWNLOAD CSV</button>
+    </div>
+  </div>
+
+  <div class="dash-body">
+
+    <!-- Stats -->
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Orders</div>
+        <div class="stat-value" id="s-total">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value" id="s-revenue">—</div>
+        <div class="stat-sub" id="s-revenue-sub"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Early Bird Orders</div>
+        <div class="stat-value" id="s-eb">—</div>
+        <div class="stat-sub" id="s-eb-rev"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Standard Orders</div>
+        <div class="stat-value" id="s-std">—</div>
+        <div class="stat-sub" id="s-std-rev"></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Spots Remaining</div>
+        <div class="stat-value" id="s-remain">—</div>
+        <div class="stat-sub">of 150 max</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">To Minimum</div>
+        <div class="stat-value" id="s-to-min">—</div>
+        <div class="stat-sub">60 needed to print</div>
+      </div>
+    </div>
+
+    <!-- Size breakdown -->
+    <div class="size-section">
+      <div class="section-title">SIZE BREAKDOWN</div>
+      <div class="size-bars" id="size-bars"></div>
+    </div>
+
+    <!-- Country breakdown -->
+    <div class="size-section">
+      <div class="section-title">REGION BREAKDOWN</div>
+      <div class="country-grid" id="country-grid"></div>
+    </div>
+
+    <!-- Orders table -->
+    <div class="table-section">
+      <div class="section-title">ALL ORDERS</div>
+      <div class="table-wrap">
+        <table id="orders-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Timestamp AEST</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Size</th>
+              <th>Street</th>
+              <th>Suburb</th>
+              <th>State</th>
+              <th>Postcode</th>
+              <th>Country</th>
+              <th>Item AUD</th>
+              <th>Ship AUD</th>
+              <th>Total AUD</th>
+              <th>Tier</th>
+              <th>Square ID</th>
+            </tr>
+          </thead>
+          <tbody id="orders-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="status-bar" id="status-bar">Loading...</div>
+</div>
+
+<script>
+  // TODO: Change this password before going live
+  // The password entered here is sent as a Bearer token to GET /api/admin/orders
+  // It must match the ADMIN_PASSWORD environment variable on your Railway server
+
+  const API_BASE = '';
+
+  let adminPassword = '';
+  let ordersData    = [];
+  let refreshTimer  = null;
+
+  // ── Password gate ──────────────────────────────────────────────────────────
+  const pwInput = document.getElementById('pw-input');
+  const pwBtn   = document.getElementById('pw-btn');
+  const pwErr   = document.getElementById('pw-err');
+
+  async function tryLogin() {
+    const pw = pwInput.value;
+    if (!pw) return;
+
+    pwBtn.disabled     = true;
+    pwBtn.textContent  = 'CHECKING...';
+    pwErr.classList.remove('show');
+
+    try {
+      const res = await fetch(API_BASE + '/api/admin/orders', {
+        headers: { Authorization: 'Bearer ' + pw },
+      });
+
+      if (res.ok) {
+        adminPassword = pw;
+        document.getElementById('gate').style.display      = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+        const data = await res.json();
+        renderDashboard(data.orders || []);
+        startAutoRefresh();
+      } else {
+        pwInput.classList.add('err');
+        pwErr.classList.add('show');
+        pwInput.classList.add('shake');
+        setTimeout(() => { pwInput.classList.remove('shake'); }, 400);
+      }
+    } catch (e) {
+      pwErr.textContent = 'Could not reach server: ' + e.message;
+      pwErr.classList.add('show');
+    }
+
+    pwBtn.disabled    = false;
+    pwBtn.textContent = 'UNLOCK';
+  }
+
+  pwBtn.addEventListener('click', tryLogin);
+  pwInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryLogin(); });
+
+  // ── Fetch orders ───────────────────────────────────────────────────────────
+  async function fetchOrders() {
+    try {
+      const res  = await fetch(API_BASE + '/api/admin/orders', {
+        headers: { Authorization: 'Bearer ' + adminPassword },
+      });
+      const data = await res.json();
+      ordersData = data.orders || [];
+      renderDashboard(ordersData);
+    } catch (e) {
+      setStatus('Refresh failed: ' + e.message);
+    }
+  }
+
+  function startAutoRefresh() {
+    fetchOrders();
+    refreshTimer = setInterval(fetchOrders, 60000);
+  }
+
+  document.getElementById('refresh-btn').addEventListener('click', fetchOrders);
+
+  // ── Render dashboard ───────────────────────────────────────────────────────
+  function fmtAUD(str) {
+    return '$' + parseFloat(str || 0).toFixed(2);
+  }
+
+  function renderDashboard(orders) {
+    const total   = orders.length;
+    const ebCount = orders.filter(o => o.priceTier === 'early-bird').length;
+    const stdCount= orders.filter(o => o.priceTier === 'standard').length;
+
+    const totalRev  = orders.reduce((s,o) => s + parseFloat(o.totalAUD||0), 0);
+    const totalItem = orders.reduce((s,o) => s + parseFloat(o.itemPriceAUD||0), 0);
+    const totalShip = orders.reduce((s,o) => s + parseFloat(o.shippingAUD||0), 0);
+
+    const ebRev  = orders.filter(o=>o.priceTier==='early-bird').reduce((s,o)=>s+parseFloat(o.totalAUD||0),0);
+    const stdRev = orders.filter(o=>o.priceTier==='standard').reduce((s,o)=>s+parseFloat(o.totalAUD||0),0);
+
+    // Stats
+    document.getElementById('s-total').textContent    = total;
+    document.getElementById('s-revenue').textContent  = '$' + totalRev.toFixed(2);
+    document.getElementById('s-revenue-sub').textContent = `Items $${totalItem.toFixed(2)} · Ship $${totalShip.toFixed(2)}`;
+    document.getElementById('s-eb').textContent       = ebCount;
+    document.getElementById('s-eb-rev').textContent   = '$' + ebRev.toFixed(2);
+    document.getElementById('s-std').textContent      = stdCount;
+    document.getElementById('s-std-rev').textContent  = '$' + stdRev.toFixed(2);
+    document.getElementById('s-remain').textContent   = Math.max(0, 150 - total);
+    const toMin = Math.max(0, 60 - total);
+    document.getElementById('s-to-min').textContent   = toMin > 0 ? toMin : '✓ Met';
+
+    // Size breakdown
+    const sizes = { XS:0, S:0, M:0, L:0, XL:0 };
+    orders.forEach(o => { if (sizes[o.size] !== undefined) sizes[o.size]++; });
+    const maxSize = Math.max(1, ...Object.values(sizes));
+    const sizeBars = document.getElementById('size-bars');
+    sizeBars.innerHTML = Object.entries(sizes).map(([s, n]) => `
+      <div class="size-row">
+        <div class="size-key">${s}</div>
+        <div class="size-bar-track"><div class="size-bar-fill" style="width:${(n/maxSize*100).toFixed(1)}%"></div></div>
+        <div class="size-count">${n}</div>
+      </div>`).join('');
+
+    // Country breakdown
+    const countries = {};
+    orders.forEach(o => { countries[o.country] = (countries[o.country]||0) + 1; });
+    const cgEl = document.getElementById('country-grid');
+    cgEl.innerHTML = Object.entries(countries)
+      .sort((a,b) => b[1]-a[1])
+      .map(([c,n]) => `
+        <div class="country-card">
+          <div class="country-name">${c}</div>
+          <div class="country-count">${n}</div>
+        </div>`).join('');
+
+    // Table
+    const tbody = document.getElementById('orders-tbody');
+    tbody.innerHTML = orders.length === 0
+      ? '<tr><td colspan="15" style="color:var(--dim);padding:20px 12px;">No orders yet.</td></tr>'
+      : [...orders].reverse().map(o => `
+          <tr>
+            <td title="${o.orderId}">${o.orderId?.slice(0,8)}…</td>
+            <td>${o.timestamp || '—'}</td>
+            <td>${esc(o.name)}</td>
+            <td>${esc(o.email)}</td>
+            <td>${o.size}</td>
+            <td>${esc(o.streetAddress)}</td>
+            <td>${esc(o.suburb)}</td>
+            <td>${o.state||'—'}</td>
+            <td>${o.postcode||'—'}</td>
+            <td>${esc(o.country)}</td>
+            <td>${fmtAUD(o.itemPriceAUD)}</td>
+            <td>${fmtAUD(o.shippingAUD)}</td>
+            <td>${fmtAUD(o.totalAUD)}</td>
+            <td><span class="${o.priceTier==='early-bird'?'tag-eb':'tag-std'}">${o.priceTier==='early-bird'?'EARLY BIRD':'STANDARD'}</span></td>
+            <td title="${o.squarePaymentId}">${o.squarePaymentId?.slice(0,12)||'—'}…</td>
+          </tr>`).join('');
+
+    const now = new Date().toLocaleTimeString('en-AU', { hour12: false });
+    setStatus(`${total} orders · Last refreshed ${now} · Auto-refresh every 60s`);
+    document.getElementById('last-refresh-label').textContent = now;
+  }
+
+  function esc(str) {
+    return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function setStatus(msg) {
+    const el = document.getElementById('status-bar');
+    if (el) el.textContent = msg;
+  }
+
+  // ── CSV export ────────────────────────────────────────────────────────────
+  document.getElementById('csv-btn').addEventListener('click', () => {
+    if (!ordersData.length) { alert('No orders to export.'); return; }
+
+    const headers = ['Order ID','Timestamp (AEST)','Name','Email','Size',
+                     'Street Address','Suburb','State','Postcode','Country',
+                     'Item Price AUD','Shipping AUD','Total AUD','Price Tier','Square Payment ID'];
+
+    function escCsv(v) {
+      const s = String(v==null?'':v);
+      return (s.includes(',')||s.includes('"')||s.includes('\n'))
+        ? '"'+s.replace(/"/g,'""')+'"' : s;
+    }
+
+    const rows = [headers.map(escCsv).join(',')];
+    ordersData.forEach(o => {
+      rows.push([
+        o.orderId, o.timestamp, o.name, o.email, o.size,
+        o.streetAddress, o.suburb, o.state, o.postcode, o.country,
+        o.itemPriceAUD, o.shippingAUD, o.totalAUD, o.priceTier, o.squarePaymentId
+      ].map(escCsv).join(','));
+    });
+
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const date = new Date().toISOString().slice(0,10);
+    link.href     = url;
+    link.download = `nix-orders-${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+</script>
+</body>
+</html>

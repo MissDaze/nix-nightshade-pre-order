@@ -1,14 +1,39 @@
-// SANDBOX MODE — swap credentials and set SQUARE_ENVIRONMENT=production before going live
+// SANDBOX MODE — swap for production credentials before going live
+//
+// RAILWAY DEPLOYMENT:
+// 1. Push this file (and package.json, public/) to a GitHub repo
+// 2. Connect repo to Railway.app — New Project → Deploy from GitHub
+// 3. Set environment variables in Railway dashboard (Variables tab)
+// 4. Railway auto-deploys on every push to main/master
+//
+// ENVIRONMENT VARIABLES REQUIRED:
+// SQUARE_ACCESS_TOKEN  — your Square access token (sandbox or production)
+// SQUARE_LOCATION_ID   — LXX26HNBNHTJF (or your production location ID)
+// SQUARE_ENVIRONMENT   — "sandbox" or "production"
+// ADMIN_PASSWORD       — password for admin.html dashboard
+// PORT                 — set automatically by Railway, do not set manually
+//
+// BEFORE GOING LIVE:
+// 1. Set all environment variables in Railway dashboard
+// 2. Update CORS origin from * to your actual Railway domain
+// 3. Switch SQUARE_ENVIRONMENT to "production"
+// 4. Replace SQUARE_ACCESS_TOKEN with your production token
+// 5. Test full payment flow in sandbox before switching credentials
+
 require('dotenv').config();
 
-const express = require('express');
+const express    = require('express');
+const cors       = require('cors');
 const { SquareClient, SquareEnvironment, SquareError } = require('square');
-const { randomUUID } = require('crypto');
-const path = require('path');
+const { v4: uuidv4 } = require('uuid');
+const fs         = require('fs');
+const path       = require('path');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// CORS — update origin to your Railway domain before going live
+app.use(cors({ origin: '*' })); // TODO: restrict to your domain before launch
 
 // ── Square client ──────────────────────────────────────────────────────────────
 const square = new SquareClient({
@@ -18,45 +43,110 @@ const square = new SquareClient({
     : SquareEnvironment.Sandbox,
 });
 
-// ── POST /process-payment ──────────────────────────────────────────────────────
-app.post('/process-payment', async (req, res) => {
-  const {
-    sourceId,
-    amountCents,
-    currency,
-    name,
-    email,
-    size,
-    streetAddress,
-    suburb,
-    state,
-    postcode,
-    country,
-    priceTier,
-  } = req.body;
+// ── In-memory orders + CSV persistence ────────────────────────────────────────
+let orders = [];
+const CSV_PATH = path.join(__dirname, 'orders.csv');
+const CSV_HEADER = 'Order ID,Timestamp (AEST),Name,Email,Size,Street Address,Suburb,State,Postcode,Country,Item Price AUD,Shipping AUD,Total AUD,Price Tier,Square Payment ID\n';
 
-  if (!sourceId || !amountCents || !currency) {
-    return res.status(400).json({ success: false, error: 'Missing required payment fields.' });
+function escapeCsv(val) {
+  const s = String(val == null ? '' : val);
+  return (s.includes(',') || s.includes('"') || s.includes('\n'))
+    ? '"' + s.replace(/"/g, '""') + '"'
+    : s;
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') { if (inQ && line[i+1] === '"') { cur += '"'; i++; } else { inQ = !inQ; } }
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+function loadOrders() {
+  if (!fs.existsSync(CSV_PATH)) { fs.writeFileSync(CSV_PATH, CSV_HEADER); return; }
+  try {
+    const lines = fs.readFileSync(CSV_PATH, 'utf8').trim().split('\n').slice(1);
+    orders = lines.filter(l => l.trim()).map(line => {
+      const [orderId, timestamp, name, email, size, streetAddress, suburb, state, postcode,
+             country, itemPriceAUD, shippingAUD, totalAUD, priceTier, squarePaymentId] = parseCSVLine(line);
+      return { orderId, timestamp, name, email, size, streetAddress, suburb, state,
+               postcode, country, itemPriceAUD, shippingAUD, totalAUD, priceTier, squarePaymentId };
+    });
+    console.log(`Loaded ${orders.length} existing orders from orders.csv`);
+  } catch (e) { console.error('Failed to load orders.csv:', e.message); }
+}
+
+function appendCSV(order) {
+  const row = [
+    order.orderId, order.timestamp, order.name, order.email, order.size,
+    order.streetAddress, order.suburb, order.state, order.postcode, order.country,
+    order.itemPriceAUD, order.shippingAUD, order.totalAUD, order.priceTier, order.squarePaymentId
+  ].map(escapeCsv).join(',') + '\n';
+  fs.appendFileSync(CSV_PATH, row);
+}
+
+function toAEST(date) {
+  const d = new Date(date.getTime() + 10 * 60 * 60 * 1000);
+  return d.toISOString().replace('Z', '+10:00');
+}
+
+// ── Pricing & validation ───────────────────────────────────────────────────────
+const EARLY_BIRD_END  = new Date('2026-05-22T13:59:59Z');
+const CAMPAIGN_END    = new Date('2026-05-28T13:59:59Z');
+const ITEM_EARLY      = 4495;
+const ITEM_STANDARD   = 5495;
+
+// Country values must match the dropdown values in index.html exactly
+const SHIPPING = {
+  'Australia':    { early: 1000, standard: 1295 },
+  'New Zealand':  { early: 2295, standard: 2295 },
+  'Asia Pacific': { early: 2695, standard: 2695 },
+  'USA / Canada': { early: 3295, standard: 3295 },
+  'UK / Europe':  { early: 3695, standard: 3695 },
+  'Rest of World':{ early: 4195, standard: 4195 },
+};
+
+// ── POST /api/payment ──────────────────────────────────────────────────────────
+app.post('/api/payment', async (req, res) => {
+  const { sourceId, amountCents, currency, name, email, size,
+          streetAddress, suburb, state, postcode, country, priceTier } = req.body;
+
+  if (!sourceId || !name || !email || !size || !country) {
+    return res.status(400).json({ success: false, error: 'Missing required fields.' });
   }
 
-  if (typeof amountCents !== 'number' || amountCents < 100) {
-    return res.status(400).json({ success: false, error: 'Invalid payment amount.' });
+  const now = new Date();
+  if (now > CAMPAIGN_END) {
+    return res.status(400).json({ success: false, error: 'This campaign has closed.' });
   }
 
-  // Guard against tampered amounts — early-bird=5490 ($44.95+$9.95), standard=6790 ($54.95+$12.95) cents AUD
-  const validAmounts = [5490, 6790];
-  if (!validAmounts.includes(amountCents)) {
-    return res.status(400).json({ success: false, error: 'Unexpected payment amount.' });
+  const isEB       = now <= EARLY_BIRD_END;
+  const itemCents  = isEB ? ITEM_EARLY : ITEM_STANDARD;
+  const rates      = SHIPPING[country];
+  if (!rates) {
+    return res.status(400).json({ success: false, error: 'Invalid shipping region.' });
+  }
+  const shipCents  = isEB ? rates.early : rates.standard;
+  const expected   = itemCents + shipCents;
+
+  if (typeof amountCents !== 'number' || amountCents !== expected) {
+    return res.status(400).json({ success: false, error: 'Payment amount mismatch.' });
+  }
+
+  if (orders.length >= 150) {
+    return res.status(400).json({ success: false, error: 'Campaign is sold out.' });
   }
 
   try {
     const response = await square.payments.create({
       sourceId,
-      idempotencyKey: randomUUID(),
-      amountMoney: {
-        amount: amountCents,
-        currency,
-      },
+      idempotencyKey: uuidv4(),
+      amountMoney: { amount: amountCents, currency: 'AUD' },
       locationId: process.env.SQUARE_LOCATION_ID,
       buyerEmailAddress: email || undefined,
       billingAddress: {
@@ -66,49 +156,62 @@ app.post('/process-payment', async (req, res) => {
         postalCode: postcode,
         country: 'AU',
       },
-      shippingAddress: {
-        addressLine1: streetAddress,
-        locality: suburb,
-        administrativeDistrictLevel1: state,
-        postalCode: postcode,
-        country: 'AU',
-      },
-      note: `Nix Nightshade | Size: ${size} | Tier: ${priceTier} | ${name}`,
+      note: `Nix Nightshade | ${size} | ${isEB ? 'early-bird' : 'standard'} | ${name}`,
       referenceId: `nix-${Date.now()}`,
     });
 
-    console.log(`Payment OK: ${response.payment.id} | ${name} | Size ${size} | ${priceTier} | ${amountCents}c AUD`);
+    const orderId = uuidv4();
+    const order = {
+      orderId,
+      timestamp:      toAEST(new Date()),
+      name, email, size, streetAddress, suburb, state, postcode, country,
+      itemPriceAUD:   (itemCents / 100).toFixed(2),
+      shippingAUD:    (shipCents / 100).toFixed(2),
+      totalAUD:       (expected  / 100).toFixed(2),
+      priceTier:      isEB ? 'early-bird' : 'standard',
+      squarePaymentId: response.payment.id,
+    };
 
-    return res.json({
-      success: true,
-      paymentId: response.payment.id,
-    });
+    orders.push(order);
+    appendCSV(order);
+
+    console.log(`OK ${orderId} | ${name} | ${size} | ${order.priceTier} | $${order.totalAUD}`);
+    return res.json({ success: true, orderId, squarePaymentId: response.payment.id });
 
   } catch (err) {
     if (err instanceof SquareError) {
-      const errors = err.body?.errors || [];
-      const detail = errors.length > 0
-        ? errors[0].detail
-        : 'Payment declined. Please try again or use a different card.';
-      console.error('Square error:', err.statusCode, errors);
+      const errs   = err.body?.errors || [];
+      const detail = errs.length ? errs[0].detail : 'Payment declined. Please try another card.';
+      console.error('Square error', err.statusCode, errs);
       return res.status(402).json({ success: false, error: detail });
     }
-
     console.error('Unexpected error:', err);
-    return res.status(500).json({ success: false, error: 'An unexpected error occurred. Please try again.' });
+    return res.status(500).json({ success: false, error: 'An unexpected error occurred.' });
   }
 });
 
-// ── Health check ───────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => res.json({ status: 'ok' }));
-
-// ── Catch-all → serve index.html ──────────────────────────────────────────────
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// ── GET /api/orders/count — public ────────────────────────────────────────────
+app.get('/api/orders/count', (_req, res) => {
+  res.json({ count: orders.length });
 });
 
+// ── GET /api/admin/orders — protected ─────────────────────────────────────────
+app.get('/api/admin/orders', (req, res) => {
+  const adminPw = process.env.ADMIN_PASSWORD || 'nixexport2026';
+  if (req.headers.authorization !== `Bearer ${adminPw}`) {
+    return res.status(401).json({ error: 'Unauthorised.' });
+  }
+  res.json({ orders, count: orders.length });
+});
+
+// ── Static files + health ──────────────────────────────────────────────────────
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('/health', (_req, res) => res.json({ status: 'ok', orders: orders.length }));
+
+// ── Start ──────────────────────────────────────────────────────────────────────
+loadOrders();
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   const env = process.env.SQUARE_ENVIRONMENT || 'sandbox';
-  console.log(`Nix Nightshade server on port ${PORT} [${env}]`);
+  console.log(`Nix Nightshade server on :${PORT} [${env}] — ${orders.length} orders loaded`);
 });
