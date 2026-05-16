@@ -171,7 +171,7 @@ app.post('/api/payment', async (req, res) => {
     const response = await square.payments.create({
       sourceId,
       idempotencyKey: uuidv4(),
-      amountMoney: { amount: amountCents, currency: 'AUD' },
+      amountMoney: { amount: BigInt(amountCents), currency: 'AUD' },
       locationId: process.env.SQUARE_LOCATION_ID,
       buyerEmailAddress: email || undefined,
       billingAddress: {
