@@ -1880,42 +1880,31 @@ PRE-LAUNCH CHECKLIST — COMPLETE ALL BEFORE GOING LIVE
     let squarePayments = null;
 
     async function initSquare() {
+      const cardContainer = document.getElementById('card-container');
+
       if (!window.Square) {
-        console.error('Square SDK not loaded.');
+        cardContainer.innerHTML =
+          '<p style="color:#c0392b;font-family:\'Space Mono\',monospace;font-size:12px;padding:12px 0;">Square SDK failed to load. Check your internet connection and refresh.</p>';
+        console.error('Square SDK not available on window');
         return;
       }
+
       try {
         squarePayments = Square.payments(APPLICATION_ID, LOCATION_ID);
-        squareCard = await squarePayments.card({
-          style: {
-            '.input-container': {
-              borderColor: '#d8d2c6',
-              borderRadius: '0px',
-            },
-            '.input-container.is-focus': {
-              borderColor: '#f0ece4',
-            },
-            '.input-container.is-error': {
-              borderColor: '#c0392b',
-            },
-            '.message-text': {
-              color: '#888',
-            },
-            '.message-icon': {
-              color: '#888',
-            },
-            input: {
-              backgroundColor: '#0a0a0a',
-              color: '#f0ece4',
-              fontFamily: '"Space Mono", monospace',
-            },
-          }
-        });
+      } catch (e) {
+        cardContainer.innerHTML =
+          '<p style="color:#c0392b;font-family:\'Space Mono\',monospace;font-size:12px;padding:12px 0;">Payment initialisation failed: ' + e.message + '</p>';
+        console.error('Square.payments() failed:', e);
+        return;
+      }
+
+      try {
+        squareCard = await squarePayments.card();
         await squareCard.attach('#card-container');
       } catch (e) {
-        console.error('Square init error:', e);
-        document.getElementById('card-container').innerHTML =
-          '<p style="color:var(--red);font-family:\'Space Mono\',monospace;font-size:12px;padding:12px 0;">Payment form could not be loaded. Please refresh and try again.</p>';
+        cardContainer.innerHTML =
+          '<p style="color:#c0392b;font-family:\'Space Mono\',monospace;font-size:12px;padding:12px 0;">Card form failed to load: ' + e.message + '</p>';
+        console.error('squareCard init/attach failed:', e);
       }
     }
 
