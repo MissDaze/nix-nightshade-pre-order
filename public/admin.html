@@ -459,6 +459,31 @@
 
   </div>
 
+  <!-- Contacts section -->
+  <div class="dash-body" style="padding-top:0;">
+    <div class="table-section">
+      <div class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>CONTACT MESSAGES</span>
+        <button class="btn-outline" id="contacts-csv-btn" style="font-size:13px;padding:7px 14px;">DOWNLOAD CONTACTS CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table id="contacts-table">
+          <thead>
+            <tr>
+              <th>Contact ID</th>
+              <th>Timestamp AEST</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Subject</th>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody id="contacts-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <div class="status-bar" id="status-bar">Loading...</div>
 </div>
 
@@ -530,9 +555,63 @@
     }
   }
 
+  async function fetchContacts() {
+    try {
+      const res  = await fetch(API_BASE + '/api/admin/contacts', {
+        headers: { Authorization: 'Bearer ' + adminPassword },
+      });
+      const data = await res.json();
+      renderContacts(data.contacts || []);
+    } catch (e) {
+      console.warn('Could not fetch contacts:', e.message);
+    }
+  }
+
+  function renderContacts(list) {
+    const tbody = document.getElementById('contacts-tbody');
+    tbody.innerHTML = list.length === 0
+      ? '<tr><td colspan="6" style="color:var(--dim);padding:20px 12px;">No messages yet.</td></tr>'
+      : [...list].reverse().map(c => `
+          <tr>
+            <td title="${c.contactId}">${c.contactId?.slice(0,8)}…</td>
+            <td>${c.timestamp||'—'}</td>
+            <td>${esc(c.name)}</td>
+            <td>${esc(c.email)}</td>
+            <td>${esc(c.subject)}</td>
+            <td style="white-space:normal;max-width:320px;">${esc(c.message)}</td>
+          </tr>`).join('');
+  }
+
+  document.getElementById('contacts-csv-btn').addEventListener('click', async () => {
+    try {
+      const res  = await fetch(API_BASE + '/api/admin/contacts', {
+        headers: { Authorization: 'Bearer ' + adminPassword },
+      });
+      const data = await res.json();
+      const list = data.contacts || [];
+      if (!list.length) { alert('No contacts to export.'); return; }
+
+      const headers = ['Contact ID','Timestamp (AEST)','Name','Email','Subject','Message'];
+      function escCsv(v) {
+        const s = String(v==null?'':v);
+        return (s.includes(',')||s.includes('"')||s.includes('\n')) ? '"'+s.replace(/"/g,'""')+'"' : s;
+      }
+      const rows = [headers.map(escCsv).join(',')];
+      list.forEach(c => rows.push([c.contactId,c.timestamp,c.name,c.email,c.subject,c.message].map(escCsv).join(',')));
+
+      const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = `nix-contacts-${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (e) { alert('Export failed: ' + e.message); }
+  });
+
   function startAutoRefresh() {
     fetchOrders();
-    refreshTimer = setInterval(fetchOrders, 60000);
+    fetchContacts();
+    refreshTimer = setInterval(() => { fetchOrders(); fetchContacts(); }, 60000);
   }
 
   document.getElementById('refresh-btn').addEventListener('click', fetchOrders);

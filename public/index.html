@@ -935,6 +935,7 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
       <li><a href="#about">About</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#trust">Trust</a></li>
+      <li><a href="#contact">Contact</a></li>
       <li><a href="#terms">Terms</a></li>
       <li><a href="#privacy">Privacy</a></li>
       <li><a href="#refunds">Refunds</a></li>
@@ -949,6 +950,7 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
   <a href="#about"   onclick="closeMobileMenu()">About</a>
   <a href="#faq"     onclick="closeMobileMenu()">FAQ</a>
   <a href="#trust"   onclick="closeMobileMenu()">Trust</a>
+  <a href="#contact" onclick="closeMobileMenu()">Contact</a>
   <a href="#terms"   onclick="closeMobileMenu()">Terms</a>
   <a href="#privacy" onclick="closeMobileMenu()">Privacy</a>
   <a href="#refunds" onclick="closeMobileMenu()">Refunds</a>
@@ -1278,7 +1280,7 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
 
     <div class="faq-item">
       <div class="faq-q">Can I change my size after ordering?<span class="faq-arrow">+</span></div>
-      <div class="faq-ans"><div class="faq-ans-inner">Email within 24 hours of ordering and we'll do our best. After 24 hours, or once the print run is finalised on 29 May, size changes can't be guaranteed. <!-- TODO: add contact email --></div></div>
+      <div class="faq-ans"><div class="faq-ans-inner">Email within 24 hours of ordering and we'll do our best. After 24 hours, or once the print run is finalised on 29 May, size changes can't be guaranteed. Use the <a href="#contact" style="color:var(--bone);text-decoration:underline;">contact form</a> below.</div></div>
     </div>
 
     <div class="faq-item">
@@ -1309,7 +1311,7 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
   <div class="container">
     <h2 class="legal-heading">TERMS &amp; CONDITIONS</h2>
     <div class="legal-body">
-      <p>These terms govern your participation in the "Life Keeps Tryna Screw Me" preorder campaign operated by Nix Nightshade, Melbourne, Australia ("we", "us"). By placing an order you agree to these terms.</p>
+      <p>These terms govern your participation in the "Life Keeps Tryna Screw Me" preorder campaign operated by Nix Nightshade (ABN 42 828 848 967), Melbourne, Australia ("we", "us"). By placing an order you agree to these terms.</p>
       <h3>Campaign Mechanics</h3>
       <p>This is a limited-time preorder campaign open from 16 May 2026 and closing 28 May 2026 at 23:59:59 AEST, or earlier if the maximum of 150 orders is reached. The campaign is for a single print run of the "Life Keeps Tryna Screw Me" graphic sweatshirt on a Gildan 18000 Heavy Blend Crewneck in black. This design will not be reprinted after this run closes.</p>
       <h3>Pricing Tiers</h3>
@@ -1340,7 +1342,7 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
       <h3>Retention</h3>
       <p>Order data is retained for 12 months following campaign close for fulfilment and compliance purposes.</p>
       <h3>Your Rights</h3>
-      <p>You have the right to access, correct, or request deletion of your personal information. Contact: <!-- TODO: add contact email --></p>
+      <p>You have the right to access, correct, or request deletion of your personal information. Use the <a href="#contact" style="color:var(--bone);text-decoration:underline;">contact form</a> on this page.</p>
     </div>
   </div>
 </section>
@@ -1357,7 +1359,58 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
       <h3>Size Changes</h3>
       <p>Size change requests submitted by email within 24 hours of ordering will be accommodated where possible. After 24 hours or once the print run is finalised, changes cannot be guaranteed.</p>
       <h3>Defective or Incorrect Items</h3>
-      <p>If you receive a defective shirt or the wrong item, you are entitled to a full replacement or refund. Contact us within 7 days of receipt with a description and photo. We cover return shipping for defective or incorrect fulfilment. Contact: <!-- TODO: add contact email --></p>
+      <p>If you receive a defective shirt or the wrong item, you are entitled to a full replacement or refund. Contact us within 7 days of receipt with a description and photo. We cover return shipping for defective or incorrect fulfilment. Use the <a href="#contact" style="color:var(--bone);text-decoration:underline;">contact form</a> on this page.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── CONTACT ───────────────────────────────────────────────────────────────── -->
+<section id="contact" class="legal-section">
+  <div class="container">
+    <h2 class="legal-heading">CONTACT</h2>
+    <p style="font-family:'Space Mono',monospace;font-size:12px;color:var(--bone);max-width:520px;margin-bottom:36px;line-height:1.8;">
+      This form is the only way to reach us. For order changes, size swaps, or anything else — fill it in and we'll get back to you. If your message is about an order, include your order ID.
+    </p>
+
+    <!-- Contact confirmation -->
+    <div id="contact-confirm" style="display:none;background:var(--border);border:1px solid var(--mid);padding:28px;max-width:520px;margin-bottom:24px;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:0.04em;margin-bottom:10px;">MESSAGE SENT</div>
+      <p style="font-family:'Space Mono',monospace;font-size:12px;color:var(--bone);line-height:1.8;">We've received your message and will respond to the email address you provided.</p>
+    </div>
+
+    <div class="form-wrap" id="contact-form-wrap">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="c-name">Full Name <span style="color:var(--red)">*</span></label>
+          <input class="form-input" type="text" id="c-name" autocomplete="name" placeholder="Your name">
+          <div class="inline-err" id="cerr-name">Please enter your name.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="c-email">Email <span style="color:var(--red)">*</span></label>
+          <input class="form-input" type="email" id="c-email" autocomplete="email" placeholder="you@example.com">
+          <div class="inline-err" id="cerr-email">Please enter a valid email.</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="c-subject">Subject</label>
+        <select class="form-select" id="c-subject">
+          <option value="Order enquiry">Order enquiry</option>
+          <option value="Size change request">Size change request</option>
+          <option value="Shipping question">Shipping question</option>
+          <option value="Refund / returns">Refund / returns</option>
+          <option value="General">General</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="c-message">Message <span style="color:var(--red)">*</span></label>
+        <textarea class="form-input" id="c-message" rows="5" placeholder="Your message..." style="resize:vertical;"></textarea>
+        <div class="inline-err" id="cerr-message">Please enter a message.</div>
+      </div>
+
+      <button class="pay-btn" id="contact-submit-btn" type="button" style="animation:none;">SEND MESSAGE</button>
+      <div id="contact-error" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--red);margin-top:12px;display:none;"></div>
     </div>
   </div>
 </section>
@@ -1370,13 +1423,14 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
       <li><a href="#about">About</a></li>
       <li><a href="#faq">FAQ</a></li>
       <li><a href="#trust">Trust</a></li>
+      <li><a href="#contact">Contact</a></li>
       <li><a href="#terms">Terms</a></li>
       <li><a href="#privacy">Privacy</a></li>
       <li><a href="#refunds">Refunds</a></li>
     </ul>
   </div>
   <div class="footer-copy">
-    <p>© 2026 Nix Nightshade. All rights reserved. Designed in Melbourne.</p>
+    <p>© 2026 Nix Nightshade. ABN 42 828 848 967. All rights reserved. Designed in Melbourne.</p>
   </div>
 </footer>
 
@@ -1850,6 +1904,66 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
   }, { threshold: 0.1 });
 
   document.querySelectorAll('.trust-card').forEach(c => trustObserver.observe(c));
+
+  // ── Contact form ────────────────────────────────────────────────────────────
+  document.getElementById('contact-submit-btn')?.addEventListener('click', async () => {
+    const btn    = document.getElementById('contact-submit-btn');
+    const errEl  = document.getElementById('contact-error');
+    errEl.style.display = 'none';
+
+    // Clear errors
+    ['cerr-name','cerr-email','cerr-message'].forEach(id => {
+      document.getElementById(id)?.classList.remove('show');
+    });
+    ['c-name','c-email','c-message'].forEach(id => {
+      document.getElementById(id)?.classList.remove('err');
+    });
+
+    let ok = true;
+    const cName    = document.getElementById('c-name');
+    const cEmail   = document.getElementById('c-email');
+    const cMessage = document.getElementById('c-message');
+
+    if (!cName?.value.trim())  { document.getElementById('cerr-name').classList.add('show');    cName.classList.add('err');    ok = false; }
+    if (!cEmail?.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cEmail.value.trim())) {
+      document.getElementById('cerr-email').classList.add('show'); cEmail.classList.add('err'); ok = false;
+    }
+    if (!cMessage?.value.trim()) { document.getElementById('cerr-message').classList.add('show'); cMessage.classList.add('err'); ok = false; }
+
+    if (!ok) return;
+
+    btn.disabled    = true;
+    btn.textContent = 'SENDING...';
+
+    try {
+      const res  = await fetch(API_BASE + '/api/contact', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name:    cName.value.trim(),
+          email:   cEmail.value.trim(),
+          subject: document.getElementById('c-subject')?.value || 'General',
+          message: cMessage.value.trim(),
+        }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        document.getElementById('contact-form-wrap').style.display = 'none';
+        document.getElementById('contact-confirm').style.display   = 'block';
+      } else {
+        errEl.textContent    = data.error || 'Something went wrong. Please try again.';
+        errEl.style.display  = 'block';
+        btn.disabled         = false;
+        btn.textContent      = 'SEND MESSAGE';
+      }
+    } catch (e) {
+      errEl.textContent   = 'Network error. Check your connection and try again.';
+      errEl.style.display = 'block';
+      btn.disabled        = false;
+      btn.textContent     = 'SEND MESSAGE';
+    }
+  });
 </script>
 </body>
 </html>

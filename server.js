@@ -48,6 +48,11 @@ let orders = [];
 const CSV_PATH = path.join(__dirname, 'orders.csv');
 const CSV_HEADER = 'Order ID,Timestamp (AEST),Name,Email,Size,Street Address,Suburb,State,Postcode,Country,Item Price AUD,Shipping AUD,Total AUD,Price Tier,Square Payment ID\n';
 
+// ── Contacts persistence ───────────────────────────────────────────────────────
+let contacts = [];
+const CONTACTS_CSV_PATH   = path.join(__dirname, 'contacts.csv');
+const CONTACTS_CSV_HEADER = 'Contact ID,Timestamp (AEST),Name,Email,Subject,Message\n';
+
 function escapeCsv(val) {
   const s = String(val == null ? '' : val);
   return (s.includes(',') || s.includes('"') || s.includes('\n'))
@@ -79,6 +84,26 @@ function loadOrders() {
     });
     console.log(`Loaded ${orders.length} existing orders from orders.csv`);
   } catch (e) { console.error('Failed to load orders.csv:', e.message); }
+}
+
+function loadContacts() {
+  if (!fs.existsSync(CONTACTS_CSV_PATH)) { fs.writeFileSync(CONTACTS_CSV_PATH, CONTACTS_CSV_HEADER); return; }
+  try {
+    const lines = fs.readFileSync(CONTACTS_CSV_PATH, 'utf8').trim().split('\n').slice(1);
+    contacts = lines.filter(l => l.trim()).map(line => {
+      const [contactId, timestamp, name, email, subject, message] = parseCSVLine(line);
+      return { contactId, timestamp, name, email, subject, message };
+    });
+    console.log(`Loaded ${contacts.length} existing contacts from contacts.csv`);
+  } catch (e) { console.error('Failed to load contacts.csv:', e.message); }
+}
+
+function appendContactCSV(contact) {
+  const row = [
+    contact.contactId, contact.timestamp, contact.name, contact.email,
+    contact.subject, contact.message
+  ].map(escapeCsv).join(',') + '\n';
+  fs.appendFileSync(CONTACTS_CSV_PATH, row);
 }
 
 function appendCSV(order) {
@@ -204,12 +229,50 @@ app.get('/api/admin/orders', (req, res) => {
   res.json({ orders, count: orders.length });
 });
 
+// ── POST /api/contact — public ────────────────────────────────────────────────
+app.post('/api/contact', (req, res) => {
+  const { name, email, subject, message } = req.body;
+
+  if (!name?.trim() || !email?.trim() || !message?.trim()) {
+    return res.status(400).json({ success: false, error: 'Name, email and message are required.' });
+  }
+
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    return res.status(400).json({ success: false, error: 'Please provide a valid email address.' });
+  }
+
+  const contact = {
+    contactId: uuidv4(),
+    timestamp: toAEST(new Date()),
+    name:      name.trim(),
+    email:     email.trim(),
+    subject:   (subject || 'General').trim(),
+    message:   message.trim(),
+  };
+
+  contacts.push(contact);
+  appendContactCSV(contact);
+
+  console.log(`Contact: ${contact.contactId} | ${contact.name} | ${contact.subject}`);
+  res.json({ success: true, contactId: contact.contactId });
+});
+
+// ── GET /api/admin/contacts — protected ───────────────────────────────────────
+app.get('/api/admin/contacts', (req, res) => {
+  const adminPw = process.env.ADMIN_PASSWORD || 'nixexport2026';
+  if (req.headers.authorization !== `Bearer ${adminPw}`) {
+    return res.status(401).json({ error: 'Unauthorised.' });
+  }
+  res.json({ contacts, count: contacts.length });
+});
+
 // ── Static files + health ──────────────────────────────────────────────────────
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('/health', (_req, res) => res.json({ status: 'ok', orders: orders.length }));
+app.get('/health', (_req, res) => res.json({ status: 'ok', orders: orders.length, contacts: contacts.length }));
 
 // ── Start ──────────────────────────────────────────────────────────────────────
 loadOrders();
+loadContacts();
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   const env = process.env.SQUARE_ENVIRONMENT || 'sandbox';
