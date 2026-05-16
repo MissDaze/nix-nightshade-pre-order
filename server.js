@@ -43,8 +43,8 @@ app.post('/process-payment', async (req, res) => {
     return res.status(400).json({ success: false, error: 'Invalid payment amount.' });
   }
 
-  // Guard against tampered amounts — early-bird=5495, standard=6790 cents AUD
-  const validAmounts = [5495, 6790];
+  // Guard against tampered amounts — early-bird=5490 ($44.95+$9.95), standard=6790 ($54.95+$12.95) cents AUD
+  const validAmounts = [5490, 6790];
   if (!validAmounts.includes(amountCents)) {
     return res.status(400).json({ success: false, error: 'Unexpected payment amount.' });
   }
