@@ -1,0 +1,2141 @@
+<!--
+================================================================================
+PRE-LAUNCH CHECKLIST — COMPLETE ALL BEFORE GOING LIVE
+================================================================================
+1. Save shirt image as shirt.png in the same folder as index.html
+2. Swap sandbox Square credentials for production credentials (search SANDBOX MODE)
+3. Change Square SDK URL from sandbox to production:
+   https://web.squarecdn.com/v1/square.js
+4. Change admin password from nixexport2026 to something personal (search nixexport2026)
+5. Replace [contact email placeholder] in Privacy section with real email
+6. Build and deploy /process-payment backend endpoint (see NOTE comment in order section)
+7. Update ORDER_COUNT variable daily during campaign
+8. Test full purchase flow in sandbox before launch
+================================================================================
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Life Keeps Tryna Screw Me — Nix Nightshade</title>
+  <meta name="description" content="Limited 10-day preorder. Maximum 150 shirts ever printed. Life Keeps Tryna Screw Me — graphic sweatshirt by Nix Nightshade, Melbourne.">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+
+  <!-- Square Web Payments SDK -->
+  <!-- SANDBOX MODE — swap these for Production credentials before going live -->
+  <script src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
+
+  <style>
+    /* =========================================================
+       RESET & BASE
+    ========================================================= */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0a0a0a;
+      --offwhite: #f0ece4;
+      --bone: #d8d2c6;
+      --red: #c0392b;
+      --border: #1a1a1a;
+      --mid: #2a2a2a;
+      --dimtext: #888;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--offwhite);
+      font-family: 'Space Mono', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Grain texture overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23grain)' opacity='1'/%3E%3C/svg%3E");
+      background-repeat: repeat;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+
+    h1, h2, h3, h4 { font-weight: normal; }
+
+    section { padding: 80px 0; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+    /* =========================================================
+       TYPOGRAPHY
+    ========================================================= */
+    .bebas { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.04em; }
+    .serif-italic { font-family: 'DM Serif Display', serif; font-style: italic; }
+    .mono { font-family: 'Space Mono', monospace; }
+
+    /* =========================================================
+       NAV
+    ========================================================= */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: var(--black);
+      border-bottom: 1px solid var(--border);
+      height: 56px;
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.08em;
+      color: var(--offwhite);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--bone);
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--offwhite); }
+
+    /* =========================================================
+       SCARCITY STRIP
+    ========================================================= */
+    .scarcity-strip {
+      background: var(--red);
+      padding: 10px 24px;
+      text-align: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: #fff;
+      margin-top: 56px;
+    }
+
+    /* =========================================================
+       HERO
+    ========================================================= */
+    #hero {
+      padding: 80px 0 80px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .hero-image-wrap {
+      position: relative;
+    }
+
+    .hero-image-wrap img {
+      width: 100%;
+      aspect-ratio: 3/4;
+      object-fit: cover;
+      background: var(--mid);
+    }
+
+    .limited-badge {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: var(--red);
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+    }
+
+    .hero-text {}
+
+    .hero-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(64px, 8vw, 104px);
+      line-height: 0.9;
+      letter-spacing: 0.02em;
+      color: var(--offwhite);
+      margin-bottom: 24px;
+    }
+
+    .hero-heading span { display: block; }
+
+    .hero-subheading {
+      font-family: 'DM Serif Display', serif;
+      font-style: italic;
+      font-size: 20px;
+      color: var(--bone);
+      margin-bottom: 40px;
+      line-height: 1.4;
+    }
+
+    .price-block {
+      margin-bottom: 32px;
+    }
+
+    .price-tier-badge {
+      display: inline-block;
+      background: var(--red);
+      color: #fff;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      margin-bottom: 12px;
+    }
+
+    .price-main {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 52px;
+      letter-spacing: 0.02em;
+      color: var(--offwhite);
+      line-height: 1;
+    }
+
+    .price-shipping {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--bone);
+      margin-top: 6px;
+    }
+
+    .early-bird-countdown {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--red);
+      margin-top: 8px;
+      letter-spacing: 0.06em;
+    }
+
+    .cta-button {
+      display: inline-block;
+      background: var(--offwhite);
+      color: var(--black);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.06em;
+      padding: 16px 40px;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s, color 0.2s;
+      text-decoration: none;
+      margin-bottom: 16px;
+    }
+
+    .cta-button:hover {
+      background: var(--bone);
+    }
+
+    .cta-footnote {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--dimtext);
+      line-height: 1.5;
+    }
+
+    /* =========================================================
+       COUNTDOWN
+    ========================================================= */
+    .countdown-bar {
+      background: var(--border);
+      border-top: 1px solid var(--mid);
+      border-bottom: 1px solid var(--mid);
+      padding: 40px 24px;
+      text-align: center;
+    }
+
+    .countdown-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--bone);
+      margin-bottom: 16px;
+    }
+
+    .countdown-digits {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(48px, 8vw, 88px);
+      letter-spacing: 0.04em;
+      color: var(--offwhite);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0;
+    }
+
+    .countdown-unit {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .countdown-sep {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(48px, 8vw, 88px);
+      color: var(--red);
+      padding: 0 8px;
+      line-height: 1;
+      margin-bottom: 20px;
+    }
+
+    .countdown-sublabel {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      color: var(--dimtext);
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .countdown-closed {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(32px, 5vw, 56px);
+      color: var(--red);
+      letter-spacing: 0.06em;
+    }
+
+    /* =========================================================
+       PROGRESS BAR
+    ========================================================= */
+    .progress-section {
+      padding: 60px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .progress-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--bone);
+      margin-bottom: 20px;
+    }
+
+    .progress-track {
+      height: 6px;
+      background: var(--mid);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--offwhite);
+      width: 0%;
+      transition: width 0s;
+    }
+
+    .progress-caption {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--bone);
+      margin-top: 14px;
+    }
+
+    .progress-caption strong {
+      color: var(--offwhite);
+    }
+
+    .progress-caption.soldout {
+      color: var(--red);
+      font-weight: 700;
+    }
+
+    .progress-hardcap {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--dimtext);
+      margin-top: 8px;
+      letter-spacing: 0.04em;
+    }
+
+    /* =========================================================
+       PRODUCT DETAIL
+    ========================================================= */
+    .product-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+
+    .product-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .product-subheading {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--dimtext);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+
+    .spec-list {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+
+    .spec-list li {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--bone);
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .spec-list li::before {
+      content: '—';
+      color: var(--red);
+      flex-shrink: 0;
+    }
+
+    .product-copy {
+      font-family: 'DM Serif Display', serif;
+      font-size: 18px;
+      line-height: 1.7;
+      color: var(--bone);
+    }
+
+    .product-copy p + p { margin-top: 20px; }
+
+    /* =========================================================
+       ABOUT
+    ========================================================= */
+    #about { border-top: 1px solid var(--border); }
+
+    .section-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 56px;
+      letter-spacing: 0.04em;
+      margin-bottom: 40px;
+    }
+
+    .about-body {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--bone);
+      line-height: 1.9;
+      max-width: 640px;
+    }
+
+    .about-body p + p { margin-top: 20px; }
+
+    .pull-quote {
+      font-family: 'DM Serif Display', serif;
+      font-style: italic;
+      font-size: 32px;
+      color: var(--offwhite);
+      border-left: 3px solid var(--red);
+      padding-left: 24px;
+      margin: 48px 0;
+      line-height: 1.3;
+      max-width: 560px;
+    }
+
+    /* =========================================================
+       ORDER FORM
+    ========================================================= */
+    #order { border-top: 1px solid var(--border); }
+
+    .order-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 56px;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .price-summary-box {
+      background: var(--border);
+      border: 1px solid var(--mid);
+      padding: 24px;
+      margin-bottom: 40px;
+      max-width: 480px;
+    }
+
+    .price-summary-box .tier-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 16px;
+    }
+
+    .price-line {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--bone);
+      padding: 6px 0;
+      border-bottom: 1px solid var(--mid);
+    }
+
+    .price-line.total {
+      color: var(--offwhite);
+      font-size: 14px;
+      font-weight: 700;
+      border-bottom: none;
+      margin-top: 4px;
+    }
+
+    .form-section {
+      max-width: 520px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--bone);
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--black);
+      border: 1px solid var(--bone);
+      color: var(--offwhite);
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus { border-color: var(--offwhite); }
+    .form-input.error { border-color: var(--red); }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* Size selector */
+    .size-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .size-btn {
+      background: var(--black);
+      border: 1px solid var(--bone);
+      color: var(--bone);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.06em;
+    }
+
+    .size-btn:hover {
+      border-color: var(--offwhite);
+      color: var(--offwhite);
+    }
+
+    .size-btn.selected {
+      background: var(--offwhite);
+      color: var(--black);
+      border-color: var(--offwhite);
+    }
+
+    .inline-error {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--red);
+      margin-top: 6px;
+      display: none;
+    }
+
+    .inline-error.visible { display: block; }
+
+    #card-container {
+      background: var(--black);
+      border: 1px solid var(--bone);
+      padding: 16px;
+      margin-bottom: 8px;
+      min-height: 90px;
+    }
+
+    .pay-btn {
+      width: 100%;
+      background: var(--offwhite);
+      color: var(--black);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 26px;
+      letter-spacing: 0.08em;
+      border: none;
+      padding: 18px;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+    }
+
+    .pay-btn:hover { background: var(--bone); }
+    .pay-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #payment-error {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--red);
+      margin-top: 12px;
+      display: none;
+    }
+
+    #payment-error.visible { display: block; }
+
+    .confirmation-box {
+      background: var(--border);
+      border: 1px solid var(--mid);
+      padding: 32px;
+      max-width: 520px;
+      display: none;
+    }
+
+    .confirmation-box.visible { display: block; }
+
+    .confirmation-box h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+    }
+
+    .confirmation-box p {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--bone);
+      line-height: 1.7;
+    }
+
+    /* =========================================================
+       TRUST
+    ========================================================= */
+    #trust { border-top: 1px solid var(--border); }
+
+    .trust-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 32px;
+    }
+
+    .trust-card {
+      border: 1px solid var(--mid);
+      padding: 28px 24px;
+    }
+
+    .trust-card-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--red);
+      margin-bottom: 12px;
+    }
+
+    .trust-card-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 24px;
+      letter-spacing: 0.04em;
+      color: var(--offwhite);
+      margin-bottom: 12px;
+    }
+
+    .trust-card-body {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      color: var(--bone);
+      line-height: 1.8;
+    }
+
+    /* =========================================================
+       FAQ
+    ========================================================= */
+    #faq { border-top: 1px solid var(--border); }
+
+    .faq-item {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .faq-question {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      cursor: pointer;
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      color: var(--offwhite);
+      letter-spacing: 0.02em;
+      user-select: none;
+    }
+
+    .faq-question:hover { color: var(--bone); }
+
+    .faq-arrow {
+      flex-shrink: 0;
+      margin-left: 16px;
+      font-size: 18px;
+      transition: transform 0.25s ease;
+      color: var(--bone);
+    }
+
+    .faq-item.open .faq-arrow {
+      transform: rotate(45deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.35s ease;
+    }
+
+    .faq-answer-inner {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--bone);
+      line-height: 1.85;
+      padding-bottom: 20px;
+    }
+
+    /* =========================================================
+       LEGAL SECTIONS
+    ========================================================= */
+    .legal-section { border-top: 1px solid var(--border); }
+
+    .legal-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 48px;
+      letter-spacing: 0.04em;
+      margin-bottom: 32px;
+    }
+
+    .legal-body {
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      color: var(--bone);
+      line-height: 1.9;
+      max-width: 720px;
+    }
+
+    .legal-body h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      color: var(--offwhite);
+      margin: 28px 0 10px;
+    }
+
+    .legal-body p + p { margin-top: 14px; }
+
+    /* =========================================================
+       ADMIN PANEL
+    ========================================================= */
+    #admin-panel {
+      display: none;
+      background: var(--border);
+      border-top: 2px solid var(--red);
+      padding: 60px 0;
+    }
+
+    #admin-panel.visible { display: block; }
+
+    .admin-heading {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 40px;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+      color: var(--red);
+    }
+
+    .admin-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--dimtext);
+      letter-spacing: 0.1em;
+      margin-bottom: 32px;
+    }
+
+    #admin-password-gate { max-width: 400px; }
+
+    .admin-input {
+      width: 100%;
+      background: var(--black);
+      border: 1px solid var(--red);
+      color: var(--offwhite);
+      font-family: 'Space Mono', monospace;
+      font-size: 13px;
+      padding: 12px 14px;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    .admin-btn {
+      background: var(--red);
+      color: #fff;
+      border: none;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.06em;
+      padding: 12px 28px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .admin-btn:hover { opacity: 0.85; }
+
+    #admin-data { display: none; }
+    #admin-data.visible { display: block; }
+
+    .admin-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .admin-stat {
+      background: var(--black);
+      border: 1px solid var(--mid);
+      padding: 20px;
+    }
+
+    .admin-stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--dimtext);
+      margin-bottom: 8px;
+    }
+
+    .admin-stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 0.02em;
+      color: var(--offwhite);
+    }
+
+    .admin-action-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .admin-btn-danger {
+      background: transparent;
+      color: var(--red);
+      border: 1px solid var(--red);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      letter-spacing: 0.06em;
+      padding: 10px 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .admin-btn-danger:hover {
+      background: var(--red);
+      color: #fff;
+    }
+
+    /* =========================================================
+       FOOTER
+    ========================================================= */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0 24px;
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.08em;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--dimtext);
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--bone); }
+
+    .footer-copy {
+      max-width: 1100px;
+      margin: 16px auto 0;
+      padding: 16px 24px 0;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-copy p {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: var(--dimtext);
+    }
+
+    .admin-dot {
+      color: #1a1a1a;
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    .admin-dot:hover { color: #333; }
+
+    /* =========================================================
+       RESPONSIVE
+    ========================================================= */
+    @media (max-width: 900px) {
+      .trust-grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        gap: 12px;
+      }
+
+      .nav-links a { font-size: 9px; }
+
+      .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+      .product-grid { grid-template-columns: 1fr; gap: 40px; }
+      .trust-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+
+      .hero-heading { font-size: 72px; }
+      .section-heading { font-size: 40px; }
+      .countdown-digits { font-size: 52px; }
+    }
+
+    @media (max-width: 480px) {
+      .nav-links { display: none; }
+      .hero-heading { font-size: 56px; }
+      section { padding: 60px 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== NAV ===== -->
+  <nav>
+    <div class="nav-inner">
+      <a href="#hero" class="nav-brand bebas">NIX NIGHTSHADE</a>
+      <ul class="nav-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#trust">Trust</a></li>
+        <li><a href="#terms">Terms</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+        <li><a href="#refunds">Refunds</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ===== SCARCITY STRIP ===== -->
+  <div class="scarcity-strip">
+    ⚠ MAXIMUM 150 SHIRTS WILL EVER EXIST — CAMPAIGN CLOSES 28 MAY 2026 11:59PM AEST
+  </div>
+
+  <!-- ===== HERO ===== -->
+  <section id="hero">
+    <div class="container">
+      <div class="hero-grid">
+        <!-- LEFT: Image -->
+        <div class="hero-image-wrap">
+          <!-- TODO: Save your shirt image as shirt.png in the same folder as index.html -->
+          <img src="shirt.png" alt="Life Keeps Tryna Screw Me — black graphic sweatshirt by Nix Nightshade">
+          <div class="limited-badge">LIMITED DROP</div>
+        </div>
+
+        <!-- RIGHT: Text -->
+        <div class="hero-text">
+          <h1 class="hero-heading">
+            <span>LIFE /</span>
+            <span>KEEPS /</span>
+            <span>TRYNA /</span>
+            <span>SCREW /</span>
+            <span>ME.</span>
+          </h1>
+          <p class="hero-subheading">For everyone still standing despite everything.</p>
+
+          <div class="price-block">
+            <div id="price-tier-badge" class="price-tier-badge" style="display:none;">EARLY BIRD</div>
+            <div class="price-main" id="hero-price">$54.95</div>
+            <div class="price-shipping" id="hero-shipping">+ $12.95 shipping</div>
+            <div class="early-bird-countdown" id="early-bird-hero-countdown" style="display:none;"></div>
+          </div>
+
+          <a href="#order" class="cta-button">CLAIM YOUR SHIRT</a>
+          <p class="cta-footnote">You won't be charged if minimum orders aren't reached.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== COUNTDOWN ===== -->
+  <div class="countdown-bar">
+    <div class="countdown-label">Campaign closes in</div>
+    <div id="main-countdown" class="countdown-digits">
+      <div class="countdown-unit">
+        <span id="cd-days">00</span>
+        <span class="countdown-sublabel">Days</span>
+      </div>
+      <span class="countdown-sep">:</span>
+      <div class="countdown-unit">
+        <span id="cd-hours">00</span>
+        <span class="countdown-sublabel">Hours</span>
+      </div>
+      <span class="countdown-sep">:</span>
+      <div class="countdown-unit">
+        <span id="cd-mins">00</span>
+        <span class="countdown-sublabel">Mins</span>
+      </div>
+      <span class="countdown-sep">:</span>
+      <div class="countdown-unit">
+        <span id="cd-secs">00</span>
+        <span class="countdown-sublabel">Secs</span>
+      </div>
+    </div>
+    <div id="countdown-closed" class="countdown-closed" style="display:none;">THIS CAMPAIGN HAS CLOSED</div>
+  </div>
+
+  <!-- ===== ORDER PROGRESS ===== -->
+  <div class="progress-section">
+    <div class="container">
+      <div class="progress-label">Order progress</div>
+      <div class="progress-track">
+        <div class="progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="progress-caption" id="progress-caption"></div>
+      <div class="progress-hardcap">Hard cap: 150 shirts total. Once gone, never reprinted.</div>
+    </div>
+  </div>
+
+  <!-- ===== PRODUCT DETAIL ===== -->
+  <section id="product">
+    <div class="container">
+      <div class="product-grid">
+        <div>
+          <h2 class="product-heading">THE GARMENT</h2>
+          <p class="product-subheading">Gildan 18000 Heavy Blend Crewneck Sweatshirt</p>
+          <ul class="spec-list">
+            <li>270 GSM / 8.0 oz heavyweight fleece</li>
+            <li>50% preshrunk cotton / 50% polyester</li>
+            <li>MVS Air-spun yarn technology — reduced pilling, smoother surface</li>
+            <li>1×1 ribbed collar, cuffs and waistband with spandex for stretch and recovery</li>
+            <li>Double-needle stitched collar, shoulders, armholes, cuffs and waistband</li>
+            <li>Classic unisex fit — runs true to size</li>
+            <li>OEKO-TEX Standard 100 certified dyes</li>
+            <li>WRAP certified ethical manufacturing</li>
+            <li>U.S. Cotton Trust Protocol member</li>
+            <li>Tear-away label</li>
+            <li>Screen print ready surface — black base, white graphic print</li>
+          </ul>
+          <div class="product-copy">
+            <p>There is a specific weight to an object made once. You pick it up and you know. Not in the way a department store knows — not branding, not packaging. Just the actual gram-count of it in your hands.</p>
+            <p>This will never be reprinted. When this campaign closes, the file gets shelved. The screen gets cleaned. The ink gets mixed for something else. Whatever is made in this run is what exists.</p>
+            <p>Most people who see this won't understand it. That's fine. You will.</p>
+          </div>
+        </div>
+        <div>
+          <!-- TODO: Save your shirt image as shirt.png in the same folder as index.html -->
+          <img src="shirt.png" alt="Life Keeps Tryna Screw Me — detail shot">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ABOUT ===== -->
+  <section id="about">
+    <div class="container">
+      <h2 class="section-heading">ABOUT</h2>
+      <div class="about-body">
+        <p>
+          The phrase came first. It's been living in a notes app for about two years, written during a period that had no shortage of material to draw from. At some point it stopped being a complaint and started being a kind of posture toward things. Wry. Resigned but not broken. Still here.
+        </p>
+        <p>
+          The design is direct. Black sweatshirt, white type, statement front and centre. The graphic is intentional without being precious. It's meant to be read.
+        </p>
+        <p>
+          Nix Nightshade is a Melbourne-based independent creator. This is a one-time print run — not a brand, not a shop, not a season. This specific design, on this specific sweatshirt, printed once. The minimum is 60 because the economics don't work below that. The maximum is 150 because scarcity that's actually enforced means something.
+        </p>
+        <p>
+          The dark humour is the point. If you've had a year that felt like it was personally authored to test your limits — this is for you. You don't need to explain it to anyone.
+        </p>
+      </div>
+      <blockquote class="pull-quote">"This isn't a brand. It's a statement."</blockquote>
+    </div>
+  </section>
+
+  <!-- ===== ORDER FORM ===== -->
+  <section id="order">
+    <div class="container">
+      <h2 class="order-heading">SECURE YOUR SHIRT</h2>
+
+      <!-- Price summary -->
+      <div class="price-summary-box">
+        <div class="tier-label" id="order-tier-label">STANDARD PRICE</div>
+        <div class="price-line"><span>Sweatshirt</span><span id="order-item-price">$54.95</span></div>
+        <div class="price-line"><span>Shipping (Australia)</span><span id="order-shipping-price">$12.95</span></div>
+        <div class="price-line total"><span>Total AUD</span><span id="order-total-price">$67.90</span></div>
+      </div>
+
+      <!-- Confirmation box (shown after success) -->
+      <div class="confirmation-box" id="confirmation-box">
+        <h3>ORDER CONFIRMED</h3>
+        <p id="confirmation-details"></p>
+        <p style="margin-top:16px;">Your order is confirmed. You'll receive an email confirmation shortly.</p>
+      </div>
+
+      <!-- Payment form -->
+      <div id="payment-form-wrap" class="form-section">
+
+        <!-- Size selector -->
+        <div class="form-group">
+          <label class="form-label">Size <span style="color:var(--red)">*</span></label>
+          <div class="size-group" id="size-group">
+            <button class="size-btn" data-size="XS" type="button">XS</button>
+            <button class="size-btn" data-size="S" type="button">S</button>
+            <button class="size-btn" data-size="M" type="button">M</button>
+            <button class="size-btn" data-size="L" type="button">L</button>
+            <button class="size-btn" data-size="XL" type="button">XL</button>
+          </div>
+          <div class="inline-error" id="error-size">Please select a size.</div>
+        </div>
+
+        <!-- Full name -->
+        <div class="form-group">
+          <label class="form-label" for="field-name">Full Name <span style="color:var(--red)">*</span></label>
+          <input class="form-input" type="text" id="field-name" placeholder="Your full name" autocomplete="name">
+          <div class="inline-error" id="error-name">Please enter your full name.</div>
+        </div>
+
+        <!-- Email -->
+        <div class="form-group">
+          <label class="form-label" for="field-email">Email Address <span style="color:var(--red)">*</span></label>
+          <input class="form-input" type="email" id="field-email" placeholder="you@example.com" autocomplete="email">
+          <div class="inline-error" id="error-email">Please enter a valid email address.</div>
+        </div>
+
+        <!-- Street address -->
+        <div class="form-group">
+          <label class="form-label" for="field-address">Street Address <span style="color:var(--red)">*</span></label>
+          <input class="form-input" type="text" id="field-address" placeholder="123 Example Street" autocomplete="street-address">
+          <div class="inline-error" id="error-address">Please enter your street address.</div>
+        </div>
+
+        <!-- Suburb + State -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="field-suburb">Suburb <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="field-suburb" placeholder="Suburb" autocomplete="address-level2">
+            <div class="inline-error" id="error-suburb">Please enter your suburb.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="field-state">State <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="field-state" value="VIC" autocomplete="address-level1">
+            <div class="inline-error" id="error-state">Please enter your state.</div>
+          </div>
+        </div>
+
+        <!-- Postcode + Country -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="field-postcode">Postcode <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="field-postcode" placeholder="3000" pattern="[0-9]{4}" maxlength="4" inputmode="numeric" autocomplete="postal-code">
+            <div class="inline-error" id="error-postcode">Please enter a valid 4-digit postcode.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="field-country">Country <span style="color:var(--red)">*</span></label>
+            <input class="form-input" type="text" id="field-country" value="Australia" autocomplete="country-name">
+            <div class="inline-error" id="error-country">Please enter your country.</div>
+          </div>
+        </div>
+
+        <!-- Card form -->
+        <div class="form-group">
+          <label class="form-label">Card Details <span style="color:var(--red)">*</span></label>
+          <div id="card-container"></div>
+          <div class="inline-error" id="error-card">Card details are required.</div>
+        </div>
+
+        <!-- Pay button -->
+        <button class="pay-btn" id="pay-btn" type="button">PAY NOW</button>
+        <div id="payment-error"></div>
+
+        <!--
+          NOTE: /process-payment requires a backend endpoint.
+          The Square token must be sent to Square Payments API server-side.
+          For a simple backend use a Railway Express server or Netlify Function.
+          A companion backend prompt is available — ask Claude Code to build it separately.
+        -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== TRUST ===== -->
+  <section id="trust">
+    <div class="container">
+      <h2 class="section-heading">WHY THIS IS SAFE</h2>
+      <div class="trust-grid">
+        <div class="trust-card">
+          <div class="trust-card-label">Zero Risk</div>
+          <div class="trust-card-title">FULL REFUND GUARANTEE</div>
+          <div class="trust-card-body">
+            If 60 orders aren't reached by 28 May 2026, every payment is automatically refunded via Square. No action needed from you. No questions asked.
+          </div>
+        </div>
+        <div class="trust-card">
+          <div class="trust-card-label">Secure Payment</div>
+          <div class="trust-card-title">PCI DSS COMPLIANT</div>
+          <div class="trust-card-body">
+            All card payments are processed via Square. PCI DSS Level 1 certified. Your card details are never entered into or stored on this website — they go directly to Square's encrypted servers.
+          </div>
+        </div>
+        <div class="trust-card">
+          <div class="trust-card-label">Ships In</div>
+          <div class="trust-card-title">3–4 WEEKS</div>
+          <div class="trust-card-body">
+            After the campaign closes on 28 May and minimum orders are confirmed, the print run is sent to production. Estimated dispatch 3–4 weeks post-campaign. Tracking provided when shipped.
+          </div>
+        </div>
+        <div class="trust-card">
+          <div class="trust-card-label">Communication</div>
+          <div class="trust-card-title">KEPT IN THE LOOP</div>
+          <div class="trust-card-body">
+            You'll receive:<br>
+            — Email confirmation on order<br>
+            — Update when campaign closes<br>
+            — Update when print is confirmed<br>
+            — Tracking number when shipped
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FAQ ===== -->
+  <section id="faq">
+    <div class="container">
+      <h2 class="section-heading">FAQ</h2>
+
+      <div class="faq-item">
+        <div class="faq-question">What happens if 60 orders aren't reached?<span class="faq-arrow">+</span></div>
+        <div class="faq-answer"><div class="faq-answer-inner">If the campaign closes on 28 May 2026 without reaching 60 orders, every payment is fully and automatically refunded via Square. No action is needed from you. Refunds typically appear within 5–10 business days.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What if it sells out before the campaign ends?<span class="faq-arrow">+</span></div>
+        <div class="faq-answer"><div class="faq-answer-inner">The hard cap is 150 shirts. Once 150 orders are placed, the campaign closes immediately regardless of the end date. The order form will be removed and the page updated. First in, first served.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">When will my shirt ship?<span class="faq-arrow">+</span></div>
+        <div class="faq-answer"><div class="faq-answer-inner">The campaign closes 28 May 2026. Once minimum orders are confirmed, the print run goes to production. Estimated dispatch is 3–4 weeks after campaign close. You'll receive a tracking number when your order ships.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What sizes are available and how do they fit?<span class="faq-arrow">+</span></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Available in XS, S, M, L, and XL. This is the Gildan 18000 Heavy Blend Crewneck — a classic unisex fit that runs true to size. If you're between sizes, size up for a slightly more relaxed fit. Refer to the Gildan 18000 size chart on the Gildan website for exact measurements.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Can I change my size after ordering?<span class="faq-arrow">+</span></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Size change requests are accepted within 24 hours of placing your order. Email us as soon as possible — after 24 hours we cannot guarantee the change can be made. Once the print run is finalised, sizes are locked.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question" id="faq-earlybird-q">Is the early bird price still available?<span class="faq-arrow">+</span></div>
+        <div class="faq-answer"><div class="faq-answer-inner" id="faq-earlybird-answer">Checking availability...</div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">What's the shirt made of?<span class="faq-arrow">+</span></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Gildan 18000 Heavy Blend Crewneck Sweatshirt. 270 GSM / 8.0 oz heavyweight fleece. 50% preshrunk cotton, 50% polyester. MVS Air-spun yarn reduces pilling. 1×1 ribbed collar, cuffs and waistband with spandex. Double-needle stitching throughout. OEKO-TEX Standard 100 certified dyes. WRAP certified ethical manufacturing. U.S. Cotton Trust Protocol member. Tear-away label. Black with white screen print.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Do you ship internationally?<span class="faq-arrow">+</span></div>
+        <div class="faq-answer"><div class="faq-answer-inner">The standard shipping rate covers Australian domestic orders. If you're outside Australia, contact us before placing your order to get an international shipping quote. International orders may incur additional customs or import duties that are the responsibility of the buyer.</div></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="faq-question">Is my payment secure?<span class="faq-arrow">+</span></div>
+        <div class="faq-answer"><div class="faq-answer-inner">Yes. All card payments are handled by Square, which is PCI DSS Level 1 certified — the highest level of payment security. Your card details are entered directly into Square's secure, encrypted form and never touch this website's server. We never see or store your card number.</div></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===== TERMS ===== -->
+  <section id="terms" class="legal-section">
+    <div class="container">
+      <h2 class="legal-heading">TERMS &amp; CONDITIONS</h2>
+      <div class="legal-body">
+        <p>These terms govern your participation in the "Life Keeps Tryna Screw Me" preorder campaign operated by Nix Nightshade, Melbourne, Australia ("we", "us", "our"). By placing an order you agree to these terms.</p>
+
+        <h3>Campaign Mechanics</h3>
+        <p>This is a limited-time preorder campaign. The campaign opens 19 May 2026 at 00:00:00 AEST and closes 28 May 2026 at 23:59:59 AEST, or earlier if the maximum order count of 150 is reached. The campaign is for a single print run of the "Life Keeps Tryna Screw Me" graphic sweatshirt on a Gildan 18000 Heavy Blend Crewneck in black. This design will not be reprinted after this run closes.</p>
+
+        <h3>Pricing Tiers</h3>
+        <p>An early bird price of $44.95 AUD (plus $10.00 AUD shipping) applies to orders placed between 19 May 2026 00:00:00 AEST and 22 May 2026 23:59:59 AEST inclusive. After this period, the standard price of $54.95 AUD (plus $12.95 AUD shipping) applies. All prices are in Australian Dollars and include GST where applicable.</p>
+
+        <h3>Minimum and Maximum Orders</h3>
+        <p>A minimum of 60 orders must be placed for the print run to proceed. If this minimum is not reached by campaign close, all payments will be automatically refunded via Square within 5–10 business days. No action is required from you. The maximum number of shirts that will be produced under any circumstances is 150. Once 150 orders are placed, the campaign closes immediately.</p>
+
+        <h3>Refund Trigger</h3>
+        <p>Full automatic refunds are issued if the minimum order threshold of 60 is not met. Once the minimum is confirmed and the print run is initiated, change-of-mind refunds are not available. Size exchange requests are accepted within 24 hours of ordering via email. Defective or incorrect items will be replaced or fully refunded — contact us within 7 days of receiving your order.</p>
+
+        <h3>Shipping and Fulfilment</h3>
+        <p>Estimated dispatch is 3–4 weeks after campaign close, subject to print production timelines. This timeframe is an estimate and not a guarantee. We are not liable for delays caused by the printing facility, logistics providers, customs, or other factors outside our direct control. Tracking will be provided when your order ships.</p>
+
+        <h3>Governing Law</h3>
+        <p>These terms are governed by the laws of Victoria, Australia. Any disputes will be subject to the exclusive jurisdiction of the courts of Victoria.</p>
+
+        <h3>Contact</h3>
+        <p>For all enquiries relating to this campaign, contact us via the email address provided in your order confirmation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== PRIVACY ===== -->
+  <section id="privacy" class="legal-section">
+    <div class="container">
+      <h2 class="legal-heading">PRIVACY POLICY</h2>
+      <div class="legal-body">
+        <h3>What We Collect</h3>
+        <p>When you place an order, we collect: your full name, email address, shipping address (street, suburb, state, postcode, country), your selected size, and a Square payment token. We do not collect, see, or store your card number, expiry date, or CVV — these are handled exclusively by Square's PCI DSS certified payment infrastructure.</p>
+
+        <h3>How We Use It</h3>
+        <p>Your information is used solely for: fulfilling your order (printing and shipping), communicating campaign and order updates, and issuing refunds if the minimum order threshold is not met. We do not use your information for marketing purposes beyond this campaign without your explicit consent.</p>
+
+        <h3>Third Party Sharing</h3>
+        <p>We share your information with Square for the purpose of processing your payment. Your name and shipping address will be shared with our print and fulfilment partners solely to produce and deliver your order. We do not sell, rent, or otherwise disclose your personal information to any other third parties.</p>
+
+        <h3>Data Retention</h3>
+        <p>Order data is retained for 12 months following campaign close for fulfilment, refund, and compliance purposes. After this period, personal data is deleted unless we are required by law to retain it longer.</p>
+
+        <h3>Your Rights</h3>
+        <p>Under Australian privacy law you have the right to access, correct, or request deletion of your personal information. To exercise these rights, contact us at: [contact email placeholder]</p>
+
+        <h3>Cookies and Tracking</h3>
+        <p>This website does not use tracking cookies or third-party analytics. Order data is stored locally in your browser's localStorage for administrative purposes and is not transmitted to any third party.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== REFUNDS ===== -->
+  <section id="refunds" class="legal-section">
+    <div class="container">
+      <h2 class="legal-heading">REFUND POLICY</h2>
+      <div class="legal-body">
+        <h3>Automatic Refund — Minimum Not Reached</h3>
+        <p>If the campaign closes on 28 May 2026 without reaching 60 orders, every payment will be automatically and fully refunded via Square. You do not need to contact us or take any action. Refunds typically appear in your account within 5–10 business days depending on your financial institution.</p>
+
+        <h3>Change of Mind</h3>
+        <p>Because this is a custom print-on-demand preorder, change-of-mind refunds are not available once the print run has been confirmed. If you have concerns about your order before print confirmation, contact us as soon as possible.</p>
+
+        <h3>Size Changes</h3>
+        <p>We will accommodate size change requests submitted via email within 24 hours of your order being placed. After 24 hours, or once the print run is finalised, size changes cannot be guaranteed.</p>
+
+        <h3>Defective or Incorrect Items</h3>
+        <p>If you receive a defective shirt or an item different from what you ordered, you are entitled to a full replacement or full refund. Contact us within 7 days of receiving your order with a description and photograph of the issue. We will cover any return shipping costs for defective or incorrectly fulfilled orders.</p>
+
+        <h3>Contact for Refund Enquiries</h3>
+        <p>For refund or return requests, contact us at: [contact email placeholder]</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ADMIN PANEL (hidden) ===== -->
+  <div id="admin-panel">
+    <div class="container">
+      <div class="admin-heading">ADMIN PANEL</div>
+      <div class="admin-sub">INTERNAL USE ONLY — NOT LINKED FROM NAVIGATION</div>
+
+      <!-- Password gate -->
+      <div id="admin-password-gate">
+        <input class="admin-input" type="password" id="admin-password-input" placeholder="Enter admin password">
+        <!-- TODO: Change this password before going live -->
+        <br>
+        <button class="admin-btn" id="admin-password-btn">UNLOCK</button>
+        <div id="admin-pw-error" style="font-family:'Space Mono',monospace;font-size:11px;color:var(--red);margin-top:8px;display:none;">Incorrect password.</div>
+      </div>
+
+      <!-- Admin data (revealed after correct password) -->
+      <div id="admin-data">
+        <div class="admin-stat-grid" id="admin-stats-grid"></div>
+        <div class="admin-action-row">
+          <button class="admin-btn" id="admin-download-btn">DOWNLOAD ALL ORDERS CSV</button>
+          <button class="admin-btn-danger" id="admin-clear-btn">CLEAR ALL LOCAL DATA</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-brand bebas">NIX NIGHTSHADE</div>
+      <ul class="footer-links">
+        <li><a href="#about">About</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="#trust">Trust</a></li>
+        <li><a href="#terms">Terms</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+        <li><a href="#refunds">Refunds</a></li>
+      </ul>
+    </div>
+    <div class="footer-copy">
+      <p>© 2026 Nix Nightshade. All rights reserved. Designed in Melbourne.</p>
+      <a href="#admin" class="admin-dot" title="">·</a>
+    </div>
+  </footer>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+    // SANDBOX MODE — swap these for Production credentials before going live
+    const APPLICATION_ID = "sandbox-sq0idb-zlDSFPR71gofaaRwdgcecA";
+    const LOCATION_ID = "LXX26HNBNHTJF";
+
+    // Update this number manually each day during the campaign
+    let ORDER_COUNT = 0;
+
+    // =========================================================
+    // TIMEZONE — All dates use explicit UTC+10 offset (AEST)
+    // Early bird:  19 May 2026 00:00:00 AEST = 2026-05-18T14:00:00Z
+    // Early bird end: 22 May 2026 23:59:59 AEST = 2026-05-22T13:59:59Z
+    // Campaign start: 2026-05-18T14:00:00Z
+    // Campaign end: 28 May 2026 23:59:59 AEST = 2026-05-28T13:59:59Z
+    // =========================================================
+    const CAMPAIGN_START_UTC  = new Date('2026-05-18T14:00:00Z');
+    const EARLY_BIRD_END_UTC  = new Date('2026-05-22T13:59:59Z');
+    const CAMPAIGN_END_UTC    = new Date('2026-05-28T13:59:59Z');
+
+    const EARLY_BIRD_ITEM_CENTS   = 4495;
+    const EARLY_BIRD_SHIP_CENTS   = 1000;
+    const STANDARD_ITEM_CENTS     = 5495;
+    const STANDARD_SHIP_CENTS     = 1295;
+
+    function nowUTC() { return new Date(); }
+
+    function isEarlyBird() {
+      const now = nowUTC();
+      return now >= CAMPAIGN_START_UTC && now <= EARLY_BIRD_END_UTC;
+    }
+
+    function isCampaignActive() {
+      const now = nowUTC();
+      return now >= CAMPAIGN_START_UTC && now <= CAMPAIGN_END_UTC;
+    }
+
+    function isCampaignEnded() {
+      return nowUTC() > CAMPAIGN_END_UTC;
+    }
+
+    function formatCents(cents) {
+      return '$' + (cents / 100).toFixed(2);
+    }
+
+    // =========================================================
+    // PRICE DISPLAY
+    // =========================================================
+    function updatePriceDisplay() {
+      const eb = isEarlyBird();
+      const itemCents  = eb ? EARLY_BIRD_ITEM_CENTS  : STANDARD_ITEM_CENTS;
+      const shipCents  = eb ? EARLY_BIRD_SHIP_CENTS  : STANDARD_SHIP_CENTS;
+      const totalCents = itemCents + shipCents;
+
+      // Hero
+      const badge   = document.getElementById('price-tier-badge');
+      const price   = document.getElementById('hero-price');
+      const ship    = document.getElementById('hero-shipping');
+      const ebCount = document.getElementById('early-bird-hero-countdown');
+
+      price.textContent = formatCents(itemCents);
+      ship.textContent  = '+ ' + formatCents(shipCents) + ' shipping';
+
+      if (eb) {
+        badge.style.display = 'inline-block';
+        ebCount.style.display = 'block';
+      } else {
+        badge.style.display = 'none';
+        ebCount.style.display = 'none';
+      }
+
+      // Order form summary
+      const tierLabel  = document.getElementById('order-tier-label');
+      const oItem      = document.getElementById('order-item-price');
+      const oShip      = document.getElementById('order-shipping-price');
+      const oTotal     = document.getElementById('order-total-price');
+
+      tierLabel.textContent = eb ? 'EARLY BIRD PRICE' : 'STANDARD PRICE';
+      oItem.textContent     = formatCents(itemCents);
+      oShip.textContent     = formatCents(shipCents);
+      oTotal.textContent    = formatCents(totalCents);
+    }
+
+    // =========================================================
+    // COUNTDOWN TIMERS
+    // =========================================================
+    function pad2(n) { return String(n).padStart(2, '0'); }
+
+    function getTimeLeft(target) {
+      const diff = target - nowUTC();
+      if (diff <= 0) return null;
+      const totalSecs = Math.floor(diff / 1000);
+      const days  = Math.floor(totalSecs / 86400);
+      const hours = Math.floor((totalSecs % 86400) / 3600);
+      const mins  = Math.floor((totalSecs % 3600) / 60);
+      const secs  = totalSecs % 60;
+      return { days, hours, mins, secs };
+    }
+
+    function updateMainCountdown() {
+      const el = document.getElementById('main-countdown');
+      const closed = document.getElementById('countdown-closed');
+
+      if (isCampaignEnded()) {
+        el.style.display = 'none';
+        closed.style.display = 'block';
+        return;
+      }
+
+      const t = getTimeLeft(CAMPAIGN_END_UTC);
+      if (!t) {
+        el.style.display = 'none';
+        closed.style.display = 'block';
+        return;
+      }
+
+      document.getElementById('cd-days').textContent  = pad2(t.days);
+      document.getElementById('cd-hours').textContent = pad2(t.hours);
+      document.getElementById('cd-mins').textContent  = pad2(t.mins);
+      document.getElementById('cd-secs').textContent  = pad2(t.secs);
+    }
+
+    function updateEarlyBirdCountdown() {
+      const el = document.getElementById('early-bird-hero-countdown');
+      if (!isEarlyBird()) return;
+      const t = getTimeLeft(EARLY_BIRD_END_UTC);
+      if (!t) { el.style.display = 'none'; return; }
+      el.textContent = `Early bird ends in: ${t.days}d ${pad2(t.hours)}h ${pad2(t.mins)}m ${pad2(t.secs)}s`;
+    }
+
+    function updateFaqEarlyBird() {
+      const el = document.getElementById('faq-earlybird-answer');
+      if (!el) return;
+      if (isEarlyBird()) {
+        const t = getTimeLeft(EARLY_BIRD_END_UTC);
+        if (t) {
+          el.textContent = `Yes — early bird pricing is still active. It closes in ${t.days} day${t.days !== 1 ? 's' : ''} and ${t.hours} hour${t.hours !== 1 ? 's' : ''}.`;
+        }
+      } else {
+        el.textContent = 'Early bird pricing closed on 22 May 2026. The current price is $54.95 AUD + $12.95 shipping.';
+      }
+    }
+
+    function tickTimers() {
+      updateMainCountdown();
+      updateEarlyBirdCountdown();
+      updateFaqEarlyBird();
+    }
+
+    setInterval(tickTimers, 1000);
+    tickTimers();
+    updatePriceDisplay();
+
+    // =========================================================
+    // PROGRESS BAR
+    // =========================================================
+    (function initProgressBar() {
+      const fill    = document.getElementById('progress-fill');
+      const caption = document.getElementById('progress-caption');
+      const MAX = 150;
+      const MIN = 60;
+      const count = ORDER_COUNT;
+
+      let targetPct = Math.min((count / MIN) * 100, 100);
+
+      caption.classList.remove('soldout');
+      if (count >= MAX) {
+        caption.innerHTML = '<strong>SOLD OUT</strong> — this campaign is closed.';
+        caption.classList.add('soldout');
+        targetPct = 100;
+      } else if (count >= MIN) {
+        const remaining = MAX - count;
+        caption.innerHTML = `<strong>Minimum reached</strong> — ${remaining} spot${remaining !== 1 ? 's' : ''} remaining out of ${MAX}.`;
+      } else {
+        const needed = MIN - count;
+        caption.innerHTML = `<strong>${needed} more order${needed !== 1 ? 's' : ''}</strong> needed to go to print.`;
+      }
+
+      let current = 0;
+      function animateFill() {
+        if (current < targetPct) {
+          current = Math.min(current + 1, targetPct);
+          fill.style.width = current + '%';
+          requestAnimationFrame(animateFill);
+        }
+      }
+      requestAnimationFrame(animateFill);
+    })();
+
+    // =========================================================
+    // FAQ ACCORDION
+    // =========================================================
+    document.querySelectorAll('.faq-question').forEach(function(q) {
+      q.addEventListener('click', function() {
+        const item   = q.parentElement;
+        const answer = item.querySelector('.faq-answer');
+        const isOpen = item.classList.contains('open');
+
+        // Close all
+        document.querySelectorAll('.faq-item.open').forEach(function(openItem) {
+          openItem.classList.remove('open');
+          openItem.querySelector('.faq-answer').style.maxHeight = '0';
+        });
+
+        // Open clicked if it was closed
+        if (!isOpen) {
+          item.classList.add('open');
+          answer.style.maxHeight = answer.scrollHeight + 'px';
+        }
+      });
+    });
+
+    // =========================================================
+    // SIZE SELECTOR
+    // =========================================================
+    let selectedSize = null;
+
+    document.querySelectorAll('.size-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.size-btn').forEach(function(b) { b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        selectedSize = btn.getAttribute('data-size');
+        document.getElementById('error-size').classList.remove('visible');
+      });
+    });
+
+    // =========================================================
+    // ADMIN PANEL — hash trigger
+    // =========================================================
+    function checkAdminHash() {
+      if (window.location.hash === '#admin') {
+        document.getElementById('admin-panel').classList.add('visible');
+        setTimeout(function() {
+          document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+
+    window.addEventListener('hashchange', checkAdminHash);
+    checkAdminHash();
+
+    // Admin password
+    // TODO: Change this password before going live
+    const ADMIN_PASSWORD = 'nixexport2026';
+
+    document.getElementById('admin-password-btn').addEventListener('click', function() {
+      const val = document.getElementById('admin-password-input').value;
+      if (val === ADMIN_PASSWORD) {
+        document.getElementById('admin-password-gate').style.display = 'none';
+        document.getElementById('admin-pw-error').style.display = 'none';
+        renderAdminData();
+        document.getElementById('admin-data').classList.add('visible');
+      } else {
+        document.getElementById('admin-pw-error').style.display = 'block';
+      }
+    });
+
+    document.getElementById('admin-password-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') document.getElementById('admin-password-btn').click();
+    });
+
+    // =========================================================
+    // LOCALSTORAGE ORDERS
+    // =========================================================
+    const ORDERS_KEY = 'nix_orders';
+
+    function getOrders() {
+      try {
+        return JSON.parse(localStorage.getItem(ORDERS_KEY) || '[]');
+      } catch(e) { return []; }
+    }
+
+    function saveOrder(order) {
+      const orders = getOrders();
+      orders.push(order);
+      localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+    }
+
+    // =========================================================
+    // UUID
+    // =========================================================
+    function generateUUID() {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+      }
+      // Fallback
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // =========================================================
+    // FORMAT DATE AS AEST ISO STRING
+    // =========================================================
+    function toAESTString(date) {
+      const offset = 10 * 60; // UTC+10
+      const local = new Date(date.getTime() + offset * 60 * 1000);
+      return local.toISOString().replace('Z', '+10:00');
+    }
+
+    // =========================================================
+    // CSV GENERATION
+    // =========================================================
+    const CSV_HEADERS = [
+      'Order ID', 'Timestamp (AEST)', 'Name', 'Email', 'Size',
+      'Street Address', 'Suburb', 'State', 'Postcode', 'Country',
+      'Item Price AUD', 'Shipping AUD', 'Total AUD', 'Price Tier', 'Square Payment ID'
+    ];
+
+    function escapeCsvCell(val) {
+      const str = String(val == null ? '' : val);
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return '"' + str.replace(/"/g, '""') + '"';
+      }
+      return str;
+    }
+
+    function ordersToCSV(orders) {
+      const rows = [CSV_HEADERS.map(escapeCsvCell).join(',')];
+      orders.forEach(function(o) {
+        rows.push([
+          o.orderId, o.timestamp, o.name, o.email, o.size,
+          o.streetAddress, o.suburb, o.state, o.postcode, o.country,
+          o.itemPriceAUD, o.shippingAUD, o.totalAUD, o.priceTier, o.squarePaymentId
+        ].map(escapeCsvCell).join(','));
+      });
+      return rows.join('\n');
+    }
+
+    function downloadCSV(csvContent, filename) {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href     = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+    }
+
+    function getTodayDateString() {
+      const now = nowUTC();
+      const offset = 10 * 60 * 60 * 1000;
+      const aest = new Date(now.getTime() + offset);
+      const y = aest.getUTCFullYear();
+      const m = String(aest.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(aest.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    // =========================================================
+    // ADMIN DATA RENDER
+    // =========================================================
+    function renderAdminData() {
+      const orders = getOrders();
+      const totalOrders = orders.length;
+      const totalRevenue = orders.reduce(function(sum, o) { return sum + parseFloat(o.totalAUD || 0); }, 0);
+      const earlyBirdCount = orders.filter(function(o) { return o.priceTier === 'early-bird'; }).length;
+      const standardCount  = orders.filter(function(o) { return o.priceTier === 'standard'; }).length;
+
+      const sizeCounts = {};
+      ['XS','S','M','L','XL'].forEach(function(s) { sizeCounts[s] = 0; });
+      orders.forEach(function(o) { if (sizeCounts[o.size] !== undefined) sizeCounts[o.size]++; });
+
+      const grid = document.getElementById('admin-stats-grid');
+      grid.innerHTML = '';
+
+      function statCard(label, value) {
+        return `<div class="admin-stat"><div class="admin-stat-label">${label}</div><div class="admin-stat-value">${value}</div></div>`;
+      }
+
+      grid.innerHTML =
+        statCard('Total Orders', totalOrders) +
+        statCard('Total Revenue AUD', '$' + totalRevenue.toFixed(2)) +
+        statCard('Early Bird Orders', earlyBirdCount) +
+        statCard('Standard Orders', standardCount) +
+        ['XS','S','M','L','XL'].map(function(s) { return statCard('Size ' + s, sizeCounts[s]); }).join('');
+    }
+
+    document.getElementById('admin-download-btn').addEventListener('click', function() {
+      const orders = getOrders();
+      if (!orders.length) { alert('No orders found in local storage.'); return; }
+      const csv = ordersToCSV(orders);
+      downloadCSV(csv, 'nix-orders-all-' + getTodayDateString() + '.csv');
+    });
+
+    document.getElementById('admin-clear-btn').addEventListener('click', function() {
+      const first = confirm('Are you sure you want to delete ALL local order data? This cannot be undone.');
+      if (!first) return;
+      const second = confirm('FINAL CONFIRMATION: Delete all local order data permanently?');
+      if (!second) return;
+      localStorage.removeItem(ORDERS_KEY);
+      alert('All local order data cleared.');
+      renderAdminData();
+    });
+
+    // =========================================================
+    // SQUARE PAYMENT FORM INIT
+    // =========================================================
+    let squareCard = null;
+    let squarePayments = null;
+
+    async function initSquare() {
+      if (!window.Square) {
+        console.error('Square SDK not loaded.');
+        return;
+      }
+      try {
+        squarePayments = Square.payments(APPLICATION_ID, LOCATION_ID);
+        squareCard = await squarePayments.card({
+          style: {
+            '.input-container': {
+              borderColor: '#d8d2c6',
+              borderRadius: '0px',
+            },
+            '.input-container.is-focus': {
+              borderColor: '#f0ece4',
+            },
+            '.input-container.is-error': {
+              borderColor: '#c0392b',
+            },
+            '.message-text': {
+              color: '#888',
+            },
+            '.message-icon': {
+              color: '#888',
+            },
+            input: {
+              backgroundColor: '#0a0a0a',
+              color: '#f0ece4',
+              fontFamily: '"Space Mono", monospace',
+            },
+          }
+        });
+        await squareCard.attach('#card-container');
+      } catch (e) {
+        console.error('Square init error:', e);
+        document.getElementById('card-container').innerHTML =
+          '<p style="color:var(--red);font-family:\'Space Mono\',monospace;font-size:12px;padding:12px 0;">Payment form could not be loaded. Please refresh and try again.</p>';
+      }
+    }
+
+    initSquare();
+
+    // =========================================================
+    // FORM VALIDATION HELPERS
+    // =========================================================
+    function showError(id) { document.getElementById(id).classList.add('visible'); }
+    function hideError(id) { document.getElementById(id).classList.remove('visible'); }
+    function markInputError(el) { el.classList.add('error'); }
+    function clearInputError(el) { el.classList.remove('error'); }
+
+    function clearAllErrors() {
+      ['error-size','error-name','error-email','error-address','error-suburb',
+       'error-state','error-postcode','error-country','error-card'].forEach(hideError);
+      ['field-name','field-email','field-address','field-suburb',
+       'field-state','field-postcode','field-country'].forEach(function(id) {
+        clearInputError(document.getElementById(id));
+      });
+    }
+
+    function validateForm() {
+      let valid = true;
+      clearAllErrors();
+
+      if (!selectedSize) {
+        showError('error-size');
+        valid = false;
+      }
+
+      const name = document.getElementById('field-name');
+      if (!name.value.trim()) {
+        showError('error-name');
+        markInputError(name);
+        valid = false;
+      }
+
+      const email = document.getElementById('field-email');
+      if (!email.value.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim())) {
+        showError('error-email');
+        markInputError(email);
+        valid = false;
+      }
+
+      const addr = document.getElementById('field-address');
+      if (!addr.value.trim()) {
+        showError('error-address');
+        markInputError(addr);
+        valid = false;
+      }
+
+      const suburb = document.getElementById('field-suburb');
+      if (!suburb.value.trim()) {
+        showError('error-suburb');
+        markInputError(suburb);
+        valid = false;
+      }
+
+      const state = document.getElementById('field-state');
+      if (!state.value.trim()) {
+        showError('error-state');
+        markInputError(state);
+        valid = false;
+      }
+
+      const postcode = document.getElementById('field-postcode');
+      if (!postcode.value.trim() || !/^[0-9]{4}$/.test(postcode.value.trim())) {
+        showError('error-postcode');
+        markInputError(postcode);
+        valid = false;
+      }
+
+      const country = document.getElementById('field-country');
+      if (!country.value.trim()) {
+        showError('error-country');
+        markInputError(country);
+        valid = false;
+      }
+
+      return valid;
+    }
+
+    // =========================================================
+    // PAY NOW
+    // =========================================================
+    document.getElementById('pay-btn').addEventListener('click', async function() {
+      const payBtn   = document.getElementById('pay-btn');
+      const errEl    = document.getElementById('payment-error');
+      errEl.classList.remove('visible');
+      errEl.textContent = '';
+
+      if (!validateForm()) return;
+
+      if (!squareCard) {
+        errEl.textContent = 'Payment form is not ready. Please refresh and try again.';
+        errEl.classList.add('visible');
+        return;
+      }
+
+      payBtn.disabled = true;
+      payBtn.textContent = 'PROCESSING...';
+
+      let tokenResult;
+      try {
+        tokenResult = await squareCard.tokenize();
+      } catch(e) {
+        payBtn.disabled = false;
+        payBtn.textContent = 'PAY NOW';
+        errEl.textContent = 'Card tokenization failed. Please check your card details and try again.';
+        errEl.classList.add('visible');
+        return;
+      }
+
+      if (tokenResult.status !== 'OK') {
+        payBtn.disabled = false;
+        payBtn.textContent = 'PAY NOW';
+        const msgs = (tokenResult.errors || []).map(function(e) { return e.message; }).join(' ');
+        errEl.textContent = 'Card error: ' + (msgs || 'Please check your card details.');
+        errEl.classList.add('visible');
+        showError('error-card');
+        return;
+      }
+
+      const sourceId  = tokenResult.token;
+      const eb        = isEarlyBird();
+      const priceTier = eb ? 'early-bird' : 'standard';
+      const itemCents = eb ? EARLY_BIRD_ITEM_CENTS : STANDARD_ITEM_CENTS;
+      const shipCents = eb ? EARLY_BIRD_SHIP_CENTS : STANDARD_SHIP_CENTS;
+      const totalCents = itemCents + shipCents;
+
+      const name       = document.getElementById('field-name').value.trim();
+      const email      = document.getElementById('field-email').value.trim();
+      const addr       = document.getElementById('field-address').value.trim();
+      const suburb     = document.getElementById('field-suburb').value.trim();
+      const state      = document.getElementById('field-state').value.trim();
+      const postcode   = document.getElementById('field-postcode').value.trim();
+      const country    = document.getElementById('field-country').value.trim();
+
+      const payload = {
+        sourceId,
+        amountCents: totalCents,
+        currency: 'AUD',
+        name,
+        email,
+        size: selectedSize,
+        streetAddress: addr,
+        suburb,
+        state,
+        postcode,
+        country,
+        priceTier,
+        timestamp: new Date().toISOString()
+      };
+
+      let response, data;
+      try {
+        response = await fetch('/process-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        data = await response.json();
+      } catch(e) {
+        payBtn.disabled = false;
+        payBtn.textContent = 'PAY NOW';
+        errEl.textContent = 'Network error. Please check your connection and try again.';
+        errEl.classList.add('visible');
+        return;
+      }
+
+      if (!response.ok || !data.success) {
+        payBtn.disabled = false;
+        payBtn.textContent = 'PAY NOW';
+        errEl.textContent = data.error || 'Payment failed. Please try again or use a different card.';
+        errEl.classList.add('visible');
+        return;
+      }
+
+      // SUCCESS
+      const orderId = generateUUID();
+      const order = {
+        orderId,
+        timestamp: toAESTString(new Date()),
+        name,
+        email,
+        size: selectedSize,
+        streetAddress: addr,
+        suburb,
+        state,
+        postcode,
+        country,
+        itemPriceAUD: (itemCents / 100).toFixed(2),
+        shippingAUD:  (shipCents / 100).toFixed(2),
+        totalAUD:     (totalCents / 100).toFixed(2),
+        priceTier,
+        squarePaymentId: data.paymentId || ''
+      };
+
+      saveOrder(order);
+
+      const csvContent = ordersToCSV([order]);
+      downloadCSV(csvContent, 'nix-orders-' + getTodayDateString() + '.csv');
+
+      // Show confirmation
+      const confBox     = document.getElementById('confirmation-box');
+      const confDetails = document.getElementById('confirmation-details');
+      confDetails.innerHTML =
+        'Order ID: ' + orderId + '<br>' +
+        'Name: ' + name + '<br>' +
+        'Email: ' + email + '<br>' +
+        'Size: ' + selectedSize + '<br>' +
+        'Shipping to: ' + addr + ', ' + suburb + ' ' + state + ' ' + postcode + ', ' + country + '<br>' +
+        'Total charged: ' + formatCents(totalCents) + ' AUD (' + (priceTier === 'early-bird' ? 'Early Bird' : 'Standard') + ')';
+
+      confBox.classList.add('visible');
+      document.getElementById('payment-form-wrap').style.display = 'none';
+      confBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  </script>
+
+</body>
+</html>
