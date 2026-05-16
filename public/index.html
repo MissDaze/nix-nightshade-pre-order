@@ -923,6 +923,24 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
       .shipping-grid { grid-template-columns: 1fr; }
       .countdown-digits { font-size: 48px; }
     }
+
+    /* ── Readability: font size overrides ─────────────────────────────────── */
+    body { font-size: 16px; }
+    .nav-links a { font-size: 12px; }
+    .mobile-menu a { font-size: 13px; }
+    .scarcity-strip { font-size: 13px; }
+    .limited-badge, .price-tier-badge, .ship-card-label,
+    .trust-card-label, .cd-sub, .psb-tier { font-size: 11px; }
+    .countdown-label, .progress-label, .progress-hardcap,
+    .footer-links a, .footer-copy p { font-size: 12px; }
+    .price-shipping, .order-counter, .eb-countdown, .cta-note,
+    .form-label { font-size: 13px; }
+    .spec-list li, .trust-card-body, .ship-card-body,
+    .inline-err, .size-btn { font-size: 14px; }
+    .about-body, .legal-body, .faq-ans-inner, .progress-caption,
+    .confirmation-box p, .psb-line, #pay-error { font-size: 15px; }
+    .form-input, .form-select, .faq-q { font-size: 15px; }
+    .psb-line.total { font-size: 17px; }
   </style>
 </head>
 <body>
@@ -1368,14 +1386,14 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
 <section id="contact" class="legal-section">
   <div class="container">
     <h2 class="legal-heading">CONTACT</h2>
-    <p style="font-family:'Space Mono',monospace;font-size:12px;color:var(--bone);max-width:520px;margin-bottom:36px;line-height:1.8;">
+    <p style="font-family:'Space Mono',monospace;font-size:15px;color:var(--bone);max-width:520px;margin-bottom:36px;line-height:1.8;">
       This form is the only way to reach us. For order changes, size swaps, or anything else — fill it in and we'll get back to you. If your message is about an order, include your order ID.
     </p>
 
     <!-- Contact confirmation -->
     <div id="contact-confirm" style="display:none;background:var(--border);border:1px solid var(--mid);padding:28px;max-width:520px;margin-bottom:24px;">
       <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:0.04em;margin-bottom:10px;">MESSAGE SENT</div>
-      <p style="font-family:'Space Mono',monospace;font-size:12px;color:var(--bone);line-height:1.8;">We've received your message and will respond to the email address you provided.</p>
+      <p style="font-family:'Space Mono',monospace;font-size:15px;color:var(--bone);line-height:1.8;">We've received your message and will respond to the email address you provided.</p>
     </div>
 
     <div class="form-wrap" id="contact-form-wrap">
@@ -1410,7 +1428,7 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
       </div>
 
       <button class="pay-btn" id="contact-submit-btn" type="button" style="animation:none;">SEND MESSAGE</button>
-      <div id="contact-error" style="font-family:'Space Mono',monospace;font-size:12px;color:var(--red);margin-top:12px;display:none;"></div>
+      <div id="contact-error" style="font-family:'Space Mono',monospace;font-size:14px;color:var(--red);margin-top:12px;display:none;"></div>
     </div>
   </div>
 </section>
@@ -1678,20 +1696,20 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
   async function initSquare() {
     const cardEl = document.getElementById('card-container');
     if (!window.Square) {
-      cardEl.innerHTML = '<p style="color:var(--red);font-family:\'Space Mono\',monospace;font-size:12px;padding:12px 0;">Square SDK failed to load. Refresh and try again.</p>';
+      cardEl.innerHTML = '<p style="color:var(--red);font-family:\'Space Mono\',monospace;font-size:14px;padding:12px 0;">Square SDK failed to load. Refresh and try again.</p>';
       return;
     }
     try {
       squarePayments = Square.payments(APPLICATION_ID, LOCATION_ID);
     } catch (e) {
-      cardEl.innerHTML = '<p style="color:var(--red);font-family:\'Space Mono\',monospace;font-size:12px;padding:12px 0;">Payment init failed: ' + e.message + '</p>';
+      cardEl.innerHTML = '<p style="color:var(--red);font-family:\'Space Mono\',monospace;font-size:14px;padding:12px 0;">Payment init failed: ' + e.message + '</p>';
       return;
     }
     try {
       squareCard = await squarePayments.card();
       await squareCard.attach('#card-container');
     } catch (e) {
-      cardEl.innerHTML = '<p style="color:var(--red);font-family:\'Space Mono\',monospace;font-size:12px;padding:12px 0;">Card form error: ' + e.message + '</p>';
+      cardEl.innerHTML = '<p style="color:var(--red);font-family:\'Space Mono\',monospace;font-size:14px;padding:12px 0;">Card form error: ' + e.message + '</p>';
     }
   }
 
