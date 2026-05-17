@@ -975,7 +975,7 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
 
 <!-- ── SCARCITY STRIP ───────────────────────────────────────────────────────── -->
 <div class="scarcity-strip">
-  ⚠ ONLY 150 SHIRTS EXIST — EVER. CAMPAIGN CLOSES 28 MAY 2026 11:59PM AEST
+  CAMPAIGN NOW OPEN &nbsp;·&nbsp; 60 ORDERS UNLOCK THE PRINT RUN &nbsp;·&nbsp; 150 MAX FOREVER &nbsp;·&nbsp; CLOSES 28 MAY 11:59PM AEST
 </div>
 
 <!-- ── HERO ─────────────────────────────────────────────────────────────────── -->
@@ -1006,7 +1006,7 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
         </div>
 
         <a href="#order" class="cta-btn">CLAIM YOUR SHIRT</a>
-        <p class="cta-note">Zero risk. Full refund if we don't hit 60 orders.</p>
+        <p class="cta-note">Full refund guaranteed if 60 orders not reached. Closes 28 May 2026.</p>
         <p class="order-counter" id="order-counter">Loading...</p>
       </div>
 
@@ -1044,7 +1044,7 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
 <!-- ── PROGRESS BAR ──────────────────────────────────────────────────────────── -->
 <div class="progress-section">
   <div class="container">
-    <div class="progress-label">Order progress — 150 shirt hard cap</div>
+    <div class="progress-label">60 orders unlock the print run · 150 max · no reprints ever</div>
     <div class="progress-track">
       <div class="progress-fill" id="progress-fill"></div>
     </div>
@@ -1628,10 +1628,16 @@ CHECKLIST — COMPLETE BEFORE GOING LIVE
         counterEl.textContent = 'SOLD OUT';
         counterEl.classList.add('urgent');
       } else if (count >= 120) {
-        counterEl.textContent = `ALMOST GONE — ${MAX - count} remaining`;
+        counterEl.textContent = `ALMOST GONE — ${MAX - count} spots remaining`;
         counterEl.classList.add('urgent');
+      } else if (count >= MIN) {
+        counterEl.textContent = `${count} ordered — print run confirmed · ${MAX - count} spots left`;
+        counterEl.classList.remove('urgent');
+      } else if (count === 0) {
+        counterEl.textContent = `Campaign open — first ${MIN} orders unlock the print run`;
+        counterEl.classList.remove('urgent');
       } else {
-        counterEl.textContent = `${count} of ${MAX} claimed`;
+        counterEl.textContent = `${count} ordered — ${MIN - count} more to unlock the run`;
         counterEl.classList.remove('urgent');
       }
     }
