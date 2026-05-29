@@ -35,7 +35,7 @@ app.use(express.json());
 // CORS — update origin to your Railway domain before going live
 app.use(cors({ origin: '*' })); // TODO: restrict to your domain before launch
 
-// ── Square client ──────────────────────────────────────────────────────────────
+// ── Square client ─────────────────────────────────────────────────────────
 const square = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
   environment: process.env.SQUARE_ENVIRONMENT === 'production'
@@ -120,9 +120,10 @@ function toAEST(date) {
   return d.toISOString().replace('Z', '+10:00');
 }
 
-// ── Pricing & validation ───────────────────────────────────────────────────────
-const EARLY_BIRD_END  = new Date('2026-05-22T13:59:59Z');
-const CAMPAIGN_END    = new Date('2026-05-28T13:59:59Z');
+// ── 14-day cycle pricing & timeline ────────────────────────────────────────────────
+const CYCLE_DURATION_MS = 14 * 24 * 60 * 60 * 1000; // 14 days in milliseconds
+const EARLY_BIRD_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // First 7 days are early bird
+
 const ITEM_EARLY      = 4495;
 const ITEM_STANDARD   = 5495;
 
@@ -136,7 +137,47 @@ const SHIPPING = {
   'Rest of World':{ early: 4195, standard: 4195 },
 };
 
-// ── POST /api/payment ──────────────────────────────────────────────────────────
+// Get the current cycle start time
+function getCycleStart() {
+  const now = new Date();
+  // If you want to set a specific cycle start date, modify this logic
+  // For now, we use the app startup as the cycle anchor
+  const CYCLE_ANCHOR = new Date('2026-05-29T00:00:00Z'); // Adjust this to your preferred start date
+  const timeSinceAnchor = now - CYCLE_ANCHOR;
+  const cyclesSinceAnchor = Math.floor(timeSinceAnchor / CYCLE_DURATION_MS);
+  return new Date(CYCLE_ANCHOR.getTime() + cyclesSinceAnchor * CYCLE_DURATION_MS);
+}
+
+function getCycleEnd() {
+  return new Date(getCycleStart().getTime() + CYCLE_DURATION_MS);
+}
+
+function getEarlyBirdEnd() {
+  return new Date(getCycleStart().getTime() + EARLY_BIRD_DURATION_MS);
+}
+
+// Calculate production date (5 business days after cycle end)
+function getProductionDate() {
+  const cycleEnd = getCycleEnd();
+  let businessDays = 0;
+  let date = new Date(cycleEnd);
+  while (businessDays < 5) {
+    date.setDate(date.getDate() + 1);
+    const dayOfWeek = date.getDay();
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) { // Skip weekends
+      businessDays++;
+    }
+  }
+  return date;
+}
+
+// Calculate dispatch date (2 weeks after production)
+function getDispatchDate() {
+  const prodDate = getProductionDate();
+  return new Date(prodDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+}
+
+// ── POST /api/payment ───────────────────────────────────────────────────────
 app.post('/api/payment', async (req, res) => {
   const { sourceId, amountCents, currency, name, email, size,
           streetAddress, suburb, state, postcode, country, priceTier } = req.body;
@@ -146,11 +187,14 @@ app.post('/api/payment', async (req, res) => {
   }
 
   const now = new Date();
-  if (now > CAMPAIGN_END) {
-    return res.status(400).json({ success: false, error: 'This campaign has closed.' });
+  const cycleEnd = getCycleEnd();
+  
+  if (now > cycleEnd) {
+    return res.status(400).json({ success: false, error: 'This campaign cycle has closed.' });
   }
 
-  const isEB       = now <= EARLY_BIRD_END;
+  const earlyBirdEnd = getEarlyBirdEnd();
+  const isEB       = now <= earlyBirdEnd;
   const itemCents  = isEB ? ITEM_EARLY : ITEM_STANDARD;
   const rates      = SHIPPING[country];
   if (!rates) {
@@ -220,6 +264,19 @@ app.get('/api/orders/count', (_req, res) => {
   res.json({ count: orders.length });
 });
 
+// ── GET /api/timeline — public (timing info for frontend) ────────────────────────
+app.get('/api/timeline', (_req, res) => {
+  const now = new Date();
+  res.json({
+    now: now.toISOString(),
+    cycleStart: getCycleStart().toISOString(),
+    cycleEnd: getCycleEnd().toISOString(),
+    earlyBirdEnd: getEarlyBirdEnd().toISOString(),
+    productionDate: getProductionDate().toISOString(),
+    dispatchDate: getDispatchDate().toISOString(),
+  });
+});
+
 // ── GET /api/admin/orders — protected ─────────────────────────────────────────
 app.get('/api/admin/orders', (req, res) => {
   const adminPw = process.env.ADMIN_PASSWORD || 'nixexport2026';
@@ -257,7 +314,7 @@ app.post('/api/contact', (req, res) => {
   res.json({ success: true, contactId: contact.contactId });
 });
 
-// ── GET /api/admin/contacts — protected ───────────────────────────────────────
+// ── GET /api/admin/contacts — protected ───────────────────────────────────
 app.get('/api/admin/contacts', (req, res) => {
   const adminPw = process.env.ADMIN_PASSWORD || 'nixexport2026';
   if (req.headers.authorization !== `Bearer ${adminPw}`) {
@@ -270,7 +327,7 @@ app.get('/api/admin/contacts', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/health', (_req, res) => res.json({ status: 'ok', orders: orders.length, contacts: contacts.length }));
 
-// ── Start ──────────────────────────────────────────────────────────────────────
+// ── Start ───────────────────────────────────────────────────────────
 loadOrders();
 loadContacts();
 const PORT = process.env.PORT || 3000;
