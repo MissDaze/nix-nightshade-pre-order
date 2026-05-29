@@ -53,6 +53,53 @@ let contacts = [];
 const CONTACTS_CSV_PATH   = path.join(__dirname, 'contacts.csv');
 const CONTACTS_CSV_HEADER = 'Contact ID,Timestamp (AEST),Name,Email,Subject,Message\n';
 
+// ── Mock orders (for demo/social proof) ───────────────────────────────────────
+// Change DEMO_ORDER_COUNT to 0 to start with real orders only
+const DEMO_ORDER_COUNT = 28; // Set this to number of fake initial orders you want displayed
+
+function generateDemoOrders(count) {
+  const firstNames = ['Alex', 'Jordan', 'Casey', 'Morgan', 'Riley', 'Taylor', 'Quinn', 'Jamie', 'Avery', 'Drew', 'Skyler', 'River'];
+  const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Miller', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Anderson', 'Thomas'];
+  const sizes = ['XS', 'S', 'M', 'L', 'XL'];
+  const suburbs = ['Melbourne', 'Sydney', 'Brisbane', 'Perth', 'Adelaide', 'Hobart', 'Darwin', 'Canberra'];
+  const states = ['VIC', 'NSW', 'QLD', 'WA', 'SA', 'TAS', 'NT', 'ACT'];
+  const countries = ['Australia', 'New Zealand'];
+  const tiers = ['early-bird', 'standard'];
+
+  const demoOrders = [];
+  const now = new Date();
+  const cycleStart = getCycleStart();
+
+  for (let i = 0; i < count; i++) {
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+    const timeOffset = Math.random() * (now - cycleStart); // Random time within cycle
+    const timestamp = new Date(cycleStart.getTime() + timeOffset);
+    const tier = tiers[Math.floor(Math.random() * tiers.length)];
+    const country = countries[Math.floor(Math.random() * countries.length)];
+
+    demoOrders.push({
+      orderId: uuidv4(),
+      timestamp: toAEST(timestamp),
+      name: `${firstName} ${lastName}`,
+      email: `${firstName.toLowerCase()}${i}@example.com`,
+      size: sizes[Math.floor(Math.random() * sizes.length)],
+      streetAddress: `${Math.floor(Math.random() * 999) + 1} Main Street`,
+      suburb: suburbs[Math.floor(Math.random() * suburbs.length)],
+      state: states[Math.floor(Math.random() * states.length)],
+      postcode: `${Math.floor(Math.random() * 9000) + 1000}`,
+      country: country,
+      itemPriceAUD: tier === 'early-bird' ? '44.95' : '54.95',
+      shippingAUD: country === 'Australia' ? (tier === 'early-bird' ? '10.00' : '12.95') : '22.95',
+      totalAUD: country === 'Australia' ? (tier === 'early-bird' ? '54.95' : '67.90') : (tier === 'early-bird' ? '67.90' : '77.90'),
+      priceTier: tier,
+      squarePaymentId: `DEMO_${uuidv4()}`,
+    });
+  }
+
+  return demoOrders;
+}
+
 function escapeCsv(val) {
   const s = String(val == null ? '' : val);
   return (s.includes(',') || s.includes('"') || s.includes('\n'))
@@ -82,6 +129,13 @@ function loadOrders() {
       return { orderId, timestamp, name, email, size, streetAddress, suburb, state,
                postcode, country, itemPriceAUD, shippingAUD, totalAUD, priceTier, squarePaymentId };
     });
+    
+    // Add demo orders if none exist yet
+    if (orders.length === 0 && DEMO_ORDER_COUNT > 0) {
+      orders = generateDemoOrders(DEMO_ORDER_COUNT);
+      console.log(`Generated ${DEMO_ORDER_COUNT} demo orders for social proof`);
+    }
+    
     console.log(`Loaded ${orders.length} existing orders from orders.csv`);
   } catch (e) { console.error('Failed to load orders.csv:', e.message); }
 }
